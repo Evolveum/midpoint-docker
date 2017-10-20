@@ -3,7 +3,7 @@ ENV JAVA_OPTS="-server -Xms256m -Xmx512m -Dmidpoint.home=/var/opt/midpoint/ -Dja
 
 MAINTAINER info@evolveum.com
 
-ENV version 3.6
+ENV version 3.6.1
 
 RUN apt-get update \
 && apt-get -y install wget
