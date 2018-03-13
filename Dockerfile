@@ -1,20 +1,13 @@
-FROM tomcat:8.0.44-jre8
-ENV JAVA_OPTS="-server -Xms256m -Xmx512m -Dmidpoint.home=/var/opt/midpoint/ -Djavax.net.ssl.trustStore=/var/opt/midpoint/keystore.jceks -Djavax.net.ssl.trustStoreType=jceks"
+FROM openjdk:8-jdk-alpine
 
 MAINTAINER info@evolveum.com
 
-ENV version 3.6.1
+ENV MP_VERSION 3.7.1
+ENV MP_DIR /opt/midpoint
 
-RUN apt-get update \
-&& apt-get -y install wget
+RUN mkdir -p ${MP_DIR}/var \
+ && wget https://evolveum.com/downloads/midpoint/${MP_VERSION}/midpoint-${MP_VERSION}-dist.tar.gz -P ${MP_DIR} \
+ && echo 'Extracting midPoint archive...' \
+ && tar xzf ${MP_DIR}/midpoint-${MP_VERSION}-dist.tar.gz -C ${MP_DIR} --strip-components=1
 
-RUN wget https://evolveum.com/downloads/midpoint/${version}/midpoint-${version}-dist.tar.bz2
-
-RUN echo 'Extracting midPoint archive...' \
-&& tar xjf midpoint-${version}-dist.tar.bz2 \
-&& rm -f midpoint-${version}-dist.tar.bz2
-
-RUN cp midpoint-${version}/war/midpoint.war /usr/local/tomcat/webapps \
-&& rm -rf midpoint-${version}
-
-CMD ["catalina.sh", "run"]
+CMD ["/bin/sh", "-c", "java -Xmx2048M -Xms2048M -Dfile.encoding=UTF8 -Dmidpoint.home=$MP_DIR/var -jar $MP_DIR/lib/midpoint.war"]
