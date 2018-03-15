@@ -3,35 +3,32 @@
 MidPoint is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official OpenJDK version 8 image which runs on Alpine Linux and deploys latest MidPoint version 3.7.1.
 
 ## Tags:
-latest: MidPoint v3.7.1
+- `latest`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker)
+- `3.7.1`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.7.1)
 
 ## Launch Container:
-Download:
+- download:
 ```
 docker pull evolveum/midpoint
 ```
-Run on port 8080:
+- run on port 8080:
 ```
 docker run -p 8080:8080 --name midpoint evolveum/midpoint
 ```
 
 ## Access MidPoint:
-URL: http://127.0.0.1:8080/midpoint
-
-Username: Administrator
-
-Password: 5ecr3t
+- URL: http://127.0.0.1:8080/midpoint
+- username: Administrator
+- password: 5ecr3t
 
 ## Admin access:
-Shell:
+- shell:
 ```
 docker exec -it midpoint /bin/sh
 ```
-
-container logs:
+- container logs:
 ```
 docker logs midpoint
 ```
-midPoint home: /opt/midpoint/var/
-
-log files: /opt/midpoint/var/log
+- midPoint home: /opt/midpoint/var/
+- log files: /opt/midpoint/var/log
