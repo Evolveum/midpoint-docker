@@ -2,7 +2,7 @@ FROM openjdk:8-jdk-alpine
 
 MAINTAINER info@evolveum.com
 
-ENV MP_VERSION 3.7.1
+ENV MP_VERSION 3.8
 ENV MP_DIR /opt/midpoint
 
 RUN mkdir -p ${MP_DIR}/var \
