@@ -1,3 +1,4 @@
+##
 FROM openjdk:8-jdk-alpine
 
 MAINTAINER info@evolveum.com
