@@ -12,9 +12,9 @@ RUN mkdir -p ${MP_DIR}/var \
  && wget https://evolveum.com/downloads/midpoint/${MP_VERSION}/midpoint-${MP_VERSION}-dist.tar.gz -P ${MP_DIR} \
  && echo 'Extracting midPoint archive...' \
  && tar xzf ${MP_DIR}/midpoint-${MP_VERSION}-dist.tar.gz -C ${MP_DIR} --strip-components=1
- && wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.12.tar.gz
- && tar xzf ./mysql-connector-java-8.0.12.tar.gz
- && cp ./mysql-connector-java-8.0.12/mysql-connector-java-8.0.12.jar ${MP_DIR}/lib/
+ && wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.12.tar.gz \
+ && tar xzf -C ${MP_DIR}/mysql-connector-java-8.0.12.tar.gz \
+ && cp ${MP_DIR}/mysql-connector-java-8.0.12/mysql-connector-java-8.0.12.jar ${MP_DIR}/lib/
 
 COPY ./config.xml ${MP_DIR}/var/config.xml
 
