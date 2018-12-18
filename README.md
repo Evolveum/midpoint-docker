@@ -4,6 +4,7 @@ MidPoint is open identity & organization management and governance platform whic
 
 ## Tags:
 - `latest`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker)
+- `3.8`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.8)
 - `3.7.1`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.7.1)
 
 ## Launch Container:
