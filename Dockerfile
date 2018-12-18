@@ -2,7 +2,7 @@ FROM openjdk:8-jdk-alpine
 
 MAINTAINER info@evolveum.com
 
-ENV MP_VERSION 3.8
+ENV MP_VERSION 3.9
 ENV MP_DIR /opt/midpoint
 ENV XMX 2048M
 ENV XMS 2048M
