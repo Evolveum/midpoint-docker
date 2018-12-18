@@ -15,6 +15,10 @@ docker pull evolveum/midpoint
 ```
 docker run -p 8080:8080 --name midpoint evolveum/midpoint
 ```
+- run on port 8080 with increased heap size:
+```
+docker run -p 8080:8080 -e XMX='4096M' XMS='4096M' --name bigger_midpoint evolveum/midpoint
+```
 
 ## Access MidPoint:
 - URL: http://127.0.0.1:8080/midpoint
