@@ -1,0 +1,95 @@
+version: "3.3"
+
+services:
+  midpoint_data:
+    image: postgres:9.5
+    environment:
+     - POSTGRES_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+     - POSTGRES_USER=midpoint
+     - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    ports:
+     - 5432:5432
+    networks:
+     - net
+    secrets:
+     - mp_database_password.txt
+    volumes:
+     - midpoint_data:/var/lib/postgresql/data
+
+  midpoint_server_node_a:
+    image: evolveum/midpoint:latest
+    ports:
+      - 8080:8080
+    environment:
+     - REPO_DATABASE_TYPE=postgresql
+     - REPO_HOST=midpoint_data
+     - REPO_DATABASE=midpoint
+     - REPO_USER=midpoint
+     - REPO_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+     - REPO_MISSING_SCHEMA_ACTION
+     - REPO_UPGRADEABLE_SCHEMA_ACTION
+     - REPO_SCHEMA_VERSION_IF_MISSING
+     - REPO_SCHEMA_VARIANT
+     - MP_KEYSTORE_PASSWORD_FILE=/run/secrets/mp_keystore_password.txt
+     - MP_MEM_MAX
+     - MP_MEM_INIT
+     - MP_JAVA_OPTS
+     - TIMEZONE
+     - MP_JAVA_OPTS=-Dmidpoint.nodeId=NodeA  -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=20001 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/run/secrets/jmxremote.password -Dcom.sun.management.jmxremote.access.file=/run/secrets/jmxremote.access -Dmidpoint.taskManager.clustered=true
+    networks:
+     - net
+    secrets:
+     - mp_database_password.txt
+     - mp_keystore_password.txt
+     - jmxremote.password
+     - jmxremote.access
+    volumes:
+     - midpoint_home_node_b:/opt/midpoint/var
+
+  midpoint_server_node_b:
+    image: evolveum/midpoint:latest
+    ports:
+      - 8081:8080
+    environment:
+     - REPO_DATABASE_TYPE=postgresql
+     - REPO_HOST=midpoint_data
+     - REPO_DATABASE=midpoint
+     - REPO_USER=midpoint
+     - REPO_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+     - REPO_MISSING_SCHEMA_ACTION
+     - REPO_UPGRADEABLE_SCHEMA_ACTION
+     - REPO_SCHEMA_VERSION_IF_MISSING
+     - REPO_SCHEMA_VARIANT
+     - MP_KEYSTORE_PASSWORD_FILE=/run/secrets/mp_keystore_password.txt
+     - MP_MEM_MAX
+     - MP_MEM_INIT
+     - MP_JAVA_OPTS
+     - TIMEZONE
+     - MP_JAVA_OPTS=-Dmidpoint.nodeId=NodeB  -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=20001 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/run/secrets/jmxremote.password -Dcom.sun.management.jmxremote.access.file=/run/secrets/jmxremote.access -Dmidpoint.taskManager.clustered=true
+    networks:
+     - net
+    secrets:
+     - mp_database_password.txt
+     - mp_keystore_password.txt
+     - jmxremote.password
+     - jmxremote.access
+    volumes:
+     - midpoint_home_node_b:/opt/midpoint/var
+
+networks:
+  net:    
+    driver: bridge
+
+secrets:
+  mp_database_password.txt:
+    file: ./configs-and-secrets/midpoint/database_password.txt
+  mp_keystore_password.txt:
+    file: ./configs-and-secrets/midpoint/keystore_password.txt
+  jmxremote.password:
+    file: ./configs-and-secrets/midpoint/jmxremote.password
+  jmxremote.access:
+    file: ./configs-and-secrets/midpoint/jmxremote.access
+volumes:
+  midpoint_data:
+  midpoint_home_node_a:
+  midpoint_home_node_b:

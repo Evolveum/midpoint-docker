@@ -1,0 +1,60 @@
+version: "3.3"
+
+services:
+  midpoint_data:
+    image: postgres:9.5
+    environment:
+     - POSTGRES_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+     - POSTGRES_USER=midpoint
+     - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    ports:
+     - 5432:5432
+    networks:
+     - net
+    secrets:
+     - mp_database_password.txt
+    volumes:
+     - midpoint_data:/var/lib/postgresql/data
+
+  midpoint_server:
+    build: ./midpoint_server/
+    depends_on:
+     - midpoint_data
+    ports:
+      - 8080:8080
+    environment:
+     - REPO_DATABASE_TYPE=postgresql
+     - REPO_HOST=midpoint_data
+     - REPO_DATABASE=midpoint
+     - REPO_USER=midpoint
+     - REPO_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+     - REPO_MISSING_SCHEMA_ACTION
+     - REPO_UPGRADEABLE_SCHEMA_ACTION
+     - REPO_SCHEMA_VERSION_IF_MISSING
+     - REPO_SCHEMA_VARIANT
+     - MP_KEYSTORE_PASSWORD_FILE=/run/secrets/mp_keystore_password.txt
+     - MP_MEM_MAX
+     - MP_MEM_INIT
+     - MP_JAVA_OPTS
+     - TIMEZONE
+    networks:
+     - net
+    secrets:
+     - mp_database_password.txt
+     - mp_keystore_password.txt
+    volumes:
+     - midpoint_home:/opt/midpoint/var
+
+networks:
+  net:    
+    driver: bridge
+
+secrets:
+  mp_database_password.txt:
+    file: ./configs-and-secrets/midpoint/database_password.txt
+  mp_keystore_password.txt:
+    file: ./configs-and-secrets/midpoint/keystore_password.txt
+    
+volumes:
+  midpoint_data:
+  midpoint_home:

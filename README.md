@@ -1,24 +1,47 @@
 # midPoint: the Identity Governance and Administration tool
 ## Info
-MidPoint is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official OpenJDK version 8 image which runs on Alpine Linux and deploys latest MidPoint version 3.7.1.
+MidPoint is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official Ubuntu 18.04 image and deploys latest MidPoint version 3.9.
 
 ## Tags:
 - `latest`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker)
 - `3.8`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.8)
 - `3.7.1`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.7.1)
 
-## Launch Container:
-- download:
+## Download image:
+- download image without building:
 ```
-docker pull evolveum/midpoint
+$ docker pull evolveum/midpoint
 ```
-- run on port 8080:
+
+## Build from git repository  
+- clone git repository:
 ```
-docker run -p 8080:8080 --name midpoint evolveum/midpoint
+$ git clone https://github.com/Evolveum/midpoint-docker.git
+$ cd midpoint-docker
 ```
-- run on port 8080 with increased heap size:
+- build:
 ```
-docker run -p 8080:8080 -e XMX='4096M' -e XMS='4096M' --name bigger_midpoint evolveum/midpoint
+$ docker build ./
+```
+- or
+```
+$ ./build.sh
+```
+You can then continue with image or one of demo composition, e.g. postgresql or clustering one.
+
+## Launch:
+- run image on port 8080:
+```
+$ docker run -p 8080:8080 --name midpoint evolveum/midpoint
+```
+- run image on port 8080 with increased heap size:
+```
+$ docker run -p 8080:8080 -e MP_MEM_MAX='4096M' -e MP_MEM_INIT='4096M' --name midpoint evolveum/midpoint
+```
+- run one of demo composition, e.g. postgresql:
+```
+$ cd demo/postgresql/
+$ docker-compose up --build
 ```
 
 ## Access MidPoint:
@@ -26,14 +49,5 @@ docker run -p 8080:8080 -e XMX='4096M' -e XMS='4096M' --name bigger_midpoint evo
 - username: Administrator
 - password: 5ecr3t
 
-## Admin access:
-- shell:
-```
-docker exec -it midpoint /bin/sh
-```
-- container logs:
-```
-docker logs midpoint
-```
-- midPoint home: /opt/midpoint/var/
-- log files: /opt/midpoint/var/log
+## Documentation
+Please see [Dockerized midPoint](https://wiki.evolveum.com/display/midPoint/Dockerized+midPoint) wiki page.

@@ -1,0 +1,7 @@
+<user>
+    <name>test_user</name>
+    <description>This is test user.</description>
+    <fullName>Test User</fullName>
+    <givenName>Test</givenName>
+    <familyName>User</familyName>
+</user>
