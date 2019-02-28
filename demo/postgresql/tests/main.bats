@@ -52,7 +52,7 @@ load ../../../library
 
 @test "350 Test DB schema version check" {
     echo "Removing version information from m_global_metadata"
-    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec -it postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
+    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
 
     echo "Bringing the containers down"
     docker-compose -f docker-compose-tests.yml down
