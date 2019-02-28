@@ -11,7 +11,7 @@ pipeline {
                 script {
                     maintainer = maintain()
                     imagename = imagename()
-                    if (env.BRANCH_NAME == "new_mP_container") {
+                    if (env.BRANCH_NAME == "master") {
                        tag = "latest"
                     } else {
                        tag = tag()

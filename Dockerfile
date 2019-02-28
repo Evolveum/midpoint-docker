@@ -6,7 +6,7 @@ LABEL Vendor="evolveum"
 LABEL ImageType="base"
 LABEL ImageName="midpoint"
 LABEL ImageOS="ubuntu:18.04"
-LABEL Version="3.9"
+LABEL Version="latest"
 
 # Install Java
 
