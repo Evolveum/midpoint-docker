@@ -18,9 +18,9 @@ groupIdUrl="${groupId//.//}"
 filename="${artifactId}-${MP_VERSION}${classifier}.${type}"
 if [[ "${MP_VERSION}" == "latest" ]] ; then
   repo="snapshots"
-  MP_VERSION=$(xmllint --xpath "string(//latest)" <(curl -s "${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
-  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
-  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
+  MP_VERSION=$(xmllint --xpath "string(//latest)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
+  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
+  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
   URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/${artifactId}-${MP_VERSION%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
 
 elif [[ $MP_VERSION =~ ^[0-9]+\.[0-9]+$ ]]; then
@@ -33,7 +33,7 @@ fi
 
 echo "Downloading midPoint $MP_VERSION from $URL"
 echo "-----------------------------------------"
-curl --output $DIR/${fileName} "$URL"
+curl -k --output $DIR/${fileName} "$URL"
 echo "-----------------------------------------"
 echo "Checking the download..."
 if tar -tf $DIR/${fileName} >/dev/null; then
