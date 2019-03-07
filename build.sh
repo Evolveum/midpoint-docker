@@ -39,7 +39,7 @@ echo "The midPoint containers were successfully built. To start them, execute th
 echo ""
 echo "(for image)"
 echo ""
-echo "$ docker run -p 8080:8080 --name midpoint evolveum/midpoint:${$tag}"
+echo "$ docker run -p 8080:8080 --name midpoint evolveum/midpoint:$tag"
 echo ""
 echo "(for demo postgresql or clustering)"
 echo ""
