@@ -1,0 +1,41 @@
+<objectTemplate xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3" xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3" xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3" xmlns:org="http://midpoint.evolveum.com/xml/ns/public/common/org-3" xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3" xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3" xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3" oid="10000000-0000-0000-0000-000000000223" version="3">
+    <name>User Object Template</name>
+    <mapping id="1">
+        <strength>strong</strength>
+        <source>
+            <c:path>$user/givenName</c:path>
+        </source>
+        <source>
+            <c:path>$user/familyName</c:path>
+        </source>
+        <expression>
+            <script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="c:ScriptExpressionEvaluatorType">
+                <code>
+					givenName + ' ' + familyName
+				</code>
+            </script>
+        </expression>
+        <target>
+            <c:path>$user/fullName</c:path>
+        </target>
+        <condition>
+            <script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="c:ScriptExpressionEvaluatorType">
+                <code>givenName != null &amp;&amp; familyName != null</code>
+            </script>
+        </condition>
+    </mapping>
+    <mapping id="2">
+        <name>basic role</name>
+        <strength>strong</strength>
+        <expression>
+            <assignmentTargetSearch xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="c:AssignmentTargetSearchExpressionEvaluatorType">
+                <targetType>c:RoleType</targetType>
+                <oid>12345678-d34d-b33f-f00d-987987987989</oid>
+            </assignmentTargetSearch>
+        </expression>
+        <target>
+            <c:path>assignment</c:path>
+        </target>
+    </mapping>
+</objectTemplate>
+
