@@ -10,10 +10,10 @@ LABEL Version="latest"
 
 # Install Java
 
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
 RUN sed 's/main$/main universe/' -i /etc/apt/sources.list
 RUN apt-get update -y
-RUN apt-get install -y openjdk-8-jre tzdata
+RUN apt-get install -y openjdk-11-jre tzdata
 
 # Copy scripts
 
