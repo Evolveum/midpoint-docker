@@ -6,7 +6,7 @@ LABEL Vendor="evolveum"
 LABEL ImageType="base"
 LABEL ImageName="midpoint"
 LABEL ImageOS="ubuntu:18.04"
-LABEL Version="latest"
+LABEL Version="4.0"
 
 # Install Java
 
@@ -25,7 +25,7 @@ RUN chmod 755 /usr/local/bin/setup-timezone.sh \
 
 # Build arguments
 
-ARG MP_VERSION=latest
+ARG MP_VERSION=4.0
 ARG MP_DIST_FILE=midpoint-dist.tar.gz
 
 ENV MP_DIR /opt/midpoint
@@ -39,6 +39,7 @@ COPY container_files/mp-dir/ ${MP_DIST_FILE}* ${MP_DIR}/
 ARG SKIP_DOWNLOAD=0
 
 COPY download-midpoint ${MP_DIR}/
+COPY common.bash ${MP_DIR}/
 
 RUN if [ "$SKIP_DOWNLOAD" = "0" ];  \
     then apt-get install -y curl \
