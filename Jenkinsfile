@@ -73,6 +73,21 @@ pipeline {
                 }
             }
         }
+	stage ('CleanUp') {
+            steps {
+                try {
+                        sh 'docker stop $(docker ps -a -q)'
+			sh 'docker rm $(docker ps -a -q)'
+			sh 'docker rmi $(docker images -a -q)'
+			sh 'docker volume prune -f'
+                    } catch (error) {
+                        def error_details = readFile('./debug')
+                        def message = "BUILD ERROR: There was a problem cleaning up ${imagename}:${tag}. \n\n ${error_details}"
+                        sh "rm -f ./debug"
+                        handleError(message)
+                    }
+            }
+        }
     }
     post { 
         always { 
