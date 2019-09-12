@@ -75,7 +75,8 @@ pipeline {
         }
 	stage ('CleanUp') {
             steps {
-                try {
+		script {
+                    try {
                         sh 'docker stop $(docker ps -a -q)'
 			sh 'docker rm $(docker ps -a -q)'
 			sh 'docker rmi $(docker images -a -q)'
@@ -86,6 +87,7 @@ pipeline {
                         sh "rm -f ./debug"
                         handleError(message)
                     }
+		}
             }
         }
     }
