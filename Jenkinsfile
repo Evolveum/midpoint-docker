@@ -78,15 +78,15 @@ pipeline {
 		script {
                     try {
                         sh 'docker stop $(docker ps -a -q)'
-			sh 'docker rm $(docker ps -a -q)'
+			sh 'docker rm -v -f $(docker ps -a -q)'
 			sh 'docker rmi $(docker images -a -q)'
-			sh 'docker volume prune -f'
                     } catch (error) {
                         def error_details = readFile('./debug')
-                        def message = "BUILD ERROR: There was a problem cleaning up ${imagename}:${tag}. \n\n ${error_details}"
+                        def message = "CLEANUP ERROR: There was a problem cleaning up ${imagename}:${tag}. \n\n ${error_details}"
                         sh "rm -f ./debug"
-                        handleError(message)
+                        echo "${message}"
                     }
+		    
 		}
             }
         }
