@@ -79,6 +79,7 @@ pipeline {
                     try {
                         sh 'docker stop $(docker ps -a -q)'
 			sh 'docker rm -v -f $(docker ps -a -q)'
+			sh 'docker volume prune -f'
 			sh 'docker rmi $(docker images -a -q)'
                     } catch (error) {
                         def error_details = readFile('./debug')
