@@ -17,7 +17,7 @@ services:
      - midpoint_data:/var/lib/postgresql/data
 
   midpoint_server_node_a:
-    image: evolveum/midpoint:latest
+    image: evolveum/midpoint:4.0.1
     ports:
       - 8080:8080
     environment:
@@ -47,7 +47,7 @@ services:
      - midpoint_home_node_b:/opt/midpoint/var
 
   midpoint_server_node_b:
-    image: evolveum/midpoint:latest
+    image: evolveum/midpoint:4.0.1
     ports:
       - 8081:8080
     environment:

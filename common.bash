@@ -1,3 +1,3 @@
 maintainer="evolveum"
 imagename="midpoint"
-tag="latest"
+tag="4.0.1"
