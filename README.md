@@ -1,6 +1,6 @@
 # midPoint: the Identity Governance and Administration tool
 ## Info
-MidPoint is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official Ubuntu 18.04 image and deploys MidPoint version 4.0.1.
+MidPoint is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official Ubuntu 18.04 image and deploys latest MidPoint version.
 
 ## Tags:
 - `latest`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker)
@@ -13,7 +13,7 @@ MidPoint is open identity & organization management and governance platform whic
 ## Download image:
 - download image without building:
 ```
-$ docker pull evolveum/midpoint:4.0.1
+$ docker pull evolveum/midpoint
 ```
 
 ## Build from git repository  
@@ -24,7 +24,7 @@ $ cd midpoint-docker
 ```
 - build:
 ```
-$ docker build -t evolveum/midpoint:4.0.1 ./
+$ docker build -t evolveum/midpoint ./
 ```
 - or
 ```
@@ -35,11 +35,11 @@ You can then continue with image or one of demo composition, e.g. postgresql or 
 ## Launch:
 - run image on port 8080:
 ```
-$ docker run -p 8080:8080 --name midpoint evolveum/midpoint:4.0.1
+$ docker run -p 8080:8080 --name midpoint evolveum/midpoint
 ```
 - run image on port 8080 with increased heap size:
 ```
-$ docker run -p 8080:8080 -e MP_MEM_MAX='4096M' -e MP_MEM_INIT='4096M' --name midpoint evolveum/midpoint:4.0.1
+$ docker run -p 8080:8080 -e MP_MEM_MAX='4096M' -e MP_MEM_INIT='4096M' --name midpoint evolveum/midpoint
 ```
 - run one of demo composition, e.g. postgresql:
 ```
