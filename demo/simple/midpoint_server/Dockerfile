@@ -1,4 +1,4 @@
-FROM evolveum/midpoint:4.0.2
+FROM evolveum/midpoint:latest
 
 MAINTAINER info@evolveum.com
 
