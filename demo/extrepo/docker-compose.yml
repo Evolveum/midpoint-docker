@@ -2,7 +2,7 @@ version: "3.3"
 
 services:
   midpoint_server:
-    image: evolveum/midpoint:latest
+    image: evolveum/midpoint:4.0.2
     ports:
       - 8080:8080
     environment:
