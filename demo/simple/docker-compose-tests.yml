@@ -18,7 +18,7 @@ services:
       - ldap_conf:/etc/ldap/slapd.d
       - ldap_data:/var/lib/ldap
   midpoint_data:
-    image: postgres:9.5
+    image: postgres:12.2
     environment:
      - POSTGRES_PASSWORD_FILE=/run/secrets/mp_database_password.txt
      - POSTGRES_USER=midpoint
