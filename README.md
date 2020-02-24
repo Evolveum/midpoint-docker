@@ -1,6 +1,6 @@
-# midPoint: the Identity Governance and Administration tool
+# MidPoint Docker Images
 ## Info
-MidPoint is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official Ubuntu 18.04 image and deploys latest MidPoint version.
+[MidPoint](https://github.com/Evolveum/midpoint) is open identity & organization management and governance platform which uses Identity Connector Framework (ConnId) and leverages Spring framework. It is a Java application deployed as a stand-alone server process. This image is based on official Ubuntu 18.04 image and deploys latest MidPoint version.
 
 ## Tags:
 - `latest`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker)
@@ -55,3 +55,4 @@ $ docker-compose up --build
 
 ## Documentation
 Please see [Dockerized midPoint](https://wiki.evolveum.com/display/midPoint/Dockerized+midPoint) wiki page.
+
