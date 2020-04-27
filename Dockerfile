@@ -19,7 +19,7 @@ RUN apt-get install -y openjdk-11-jre tzdata
 
 COPY container_files/usr-local-bin/* /usr/local/bin/
 
-RUN chmod 755 /usr/local/bin/setup-timezone.sh \
+RUN chmod 755 /usr/local/bin/log-timezone.sh \
  && chmod 755 /usr/local/bin/start-midpoint.sh \
  && chmod 755 /usr/local/bin/startup.sh
 
@@ -70,7 +70,7 @@ ENV REPO_UPGRADEABLE_SCHEMA_ACTION stop
 
 ENV MP_MEM_MAX 2048m
 ENV MP_MEM_INIT 1024m
-ENV TIMEZONE UTC
+ENV TZ UTC
 ARG MP_JAVA_OPTS
 
 HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/healthcheck.sh

@@ -34,7 +34,7 @@ services:
      - MP_MEM_MAX
      - MP_MEM_INIT
      - MP_JAVA_OPTS
-     - TIMEZONE
+     - TZ
      - MP_JAVA_OPTS=-Dmidpoint.nodeId=NodeA  -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=20001 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/run/secrets/jmxremote.password -Dcom.sun.management.jmxremote.access.file=/run/secrets/jmxremote.access -Dmidpoint.taskManager.clustered=true
     networks:
      - net
@@ -64,7 +64,7 @@ services:
      - MP_MEM_MAX
      - MP_MEM_INIT
      - MP_JAVA_OPTS
-     - TIMEZONE
+     - TZ
      - MP_JAVA_OPTS=-Dmidpoint.nodeId=NodeB  -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=20001 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/run/secrets/jmxremote.password -Dcom.sun.management.jmxremote.access.file=/run/secrets/jmxremote.access -Dmidpoint.taskManager.clustered=true
     networks:
      - net

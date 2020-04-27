@@ -21,7 +21,7 @@ services:
      - MP_MEM_MAX
      - MP_MEM_INIT
      - MP_JAVA_OPTS
-     - TIMEZONE
+     - TZ
     networks:
      - net
     secrets:
