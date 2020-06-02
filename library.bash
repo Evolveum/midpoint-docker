@@ -93,7 +93,7 @@ function get_and_check_object () {
     fi
     local TMPFILE=$(mktemp /tmp/get.XXXXXX)
     echo tmp file is $TMPFILE
-    curl --user administrator:5ecr3t -H "Content-Type: application/xml" -X GET "http://localhost:$PORT/midpoint/ws/rest/$TYPE/$OID" >$TMPFILE || (rm $TMPFILE ; return 1)
+    curl --user administrator:5ecr3t -H "Accept: application/xml" -X GET "http://localhost:$PORT/midpoint/ws/rest/$TYPE/$OID" >$TMPFILE || (rm $TMPFILE ; return 1)
     if (grep -q "<name>$NAME</name>" <$TMPFILE); then
         echo "Object $TYPE/$OID '$NAME' is OK"
         rm $TMPFILE
@@ -267,7 +267,7 @@ function search_objects_by_name () {
     fi
     TMPFILE=$(mktemp /tmp/search.XXXXXX)
 
-    curl --write-out %{http_code}  --user administrator:5ecr3t -H "Content-Type: application/xml" -X POST "http://localhost:$PORT/midpoint/ws/rest/$TYPE/search" -d @- << EOF >$TMPFILE || (rm $TMPFILE ; return 1)
+    curl --write-out %{http_code}  --user administrator:5ecr3t -H "Accept: application/xml" -H "Content-Type: application/xml" -X POST "http://localhost:$PORT/midpoint/ws/rest/$TYPE/search" -d @- << EOF >$TMPFILE || (rm $TMPFILE ; return 1)
 <q:query xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3">
     <q:filter>
         <q:equal>
