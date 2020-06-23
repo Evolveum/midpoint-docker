@@ -8,6 +8,7 @@
 - `4.0.2`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/4.0.2)
 - `4.0.1`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/4.0.1)
 - `4.0`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/4.0)
+- `3.9.1`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.9.1)
 - `3.9`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.9)
 - `3.8`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.8)
 - `3.7.1`[(midpoint/Dockerfile)](https://github.com/Evolveum/midpoint-docker/tree/3.7.1)
