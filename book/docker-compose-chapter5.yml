@@ -1,0 +1,80 @@
+version: "3.4"
+
+services:
+  postgresql-midpoint:
+    image: postgres:12-alpine
+    container_name: book-postgresql-midpoint-chapter-5
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+      - POSTGRES_USER=midpoint
+      - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    ports:
+      - 5432:5432
+    networks:
+      - net
+    secrets:
+      - mp_database_password.txt
+    volumes:
+      - pg-midpoint_data:/var/lib/postgresql/data
+
+  ldap:
+    image: osixia/openldap:1.3.0
+    container_name: book-ldap-chapter-5
+    entrypoint: [ "/container/tool/run", "--copy-service" ]
+    ports:
+      - "10389:389"
+    environment:
+      - LDAP_DOMAIN=example.com
+      - LDAP_ADMIN_PASSWORD=secret
+      - LDAP_TLS=false
+    networks:
+      - net
+    volumes:
+      - ldap_conf:/etc/ldap/slapd.d
+      - ldap_data:/var/lib/ldap
+      - ./book-chapter-common/container-book-ldap_files:/container/service/slapd/assets/config/bootstrap/ldif/custom/000_base:ro
+      - ./book-chapter-5/container-book-ldap_files/custom:/container/service/slapd/assets/config/bootstrap/ldif/custom/001_additional:ro
+
+  midpoint:
+    image: evolveum/midpoint:${MP_VERSION:-4.2-M3}-alpine
+    container_name: book-midpoint-chapter-5
+    ports:
+      - "8080:8080"
+    environment:
+      - REPO_DATABASE_TYPE=postgresql
+      - REPO_HOST=book-postgresql-midpoint-chapter-5
+      - REPO_DATABASE=midpoint
+      - REPO_USER=midpoint
+      - REPO_PASSWORD_FILE=/run/secrets/mp_database_password.txt
+      - MP_KEYSTORE_PASSWORD_FILE=/run/secrets/mp_keystore_password.txt
+    networks:
+      - net
+    secrets:
+      - mp_database_password.txt
+      - mp_keystore_password.txt
+    volumes:
+      - midpoint_home:/opt/midpoint/var
+      - ./book-chapter-5/container-book-midpoint_files:/opt/midpoint-dirs-docker-entrypoint/:ro
+    depends_on:
+      - ldap
+      - postgresql-midpoint
+
+networks:
+  net:    
+    driver: bridge
+
+secrets:
+  mp_database_password.txt:
+    file: ./book-chapter-common/configs-and-secrets/database_password.txt
+  mp_keystore_password.txt:
+    file: ./book-chapter-common/configs-and-secrets/keystore_password.txt
+
+volumes:
+  midpoint_home:
+    name: book-midpoint_home-chapter-5
+  ldap_conf:
+    name: book-ldap_conf-chapter-5
+  ldap_data:
+    name: book-ldap_data-chapter-5
+  pg-midpoint_data:
+    name: book-postgresql-midpoint_data-chapter-5

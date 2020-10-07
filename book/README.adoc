@@ -1,0 +1,102 @@
+:toc: left
+:toclevels: 4
+:author: Kamil Jires
+
+= Midpoint samples related to the book
+
+== Definition 
+
+In this repository you can find the files required to run docker instances in order to try things explained in the https://docs.evolveum.com/book/[Midpoint Book].
+
+== System requirements
+
+* Docker Engine relese 17.09.0+
+* docker-compose
+* 4+ GB RAM
+* internet connection
+* git (to checkout) on unzip (to extract downloaded archive)
+
+=== Docker Engine
+We use docker compose file in version 3.4, which sets the minimal docker engine version - https://docs.docker.com/compose/compose-file/compose-versioning/#compatibility-matrix[Compatibility matrix].
+
+The feature *Names* for volumes is used, which was introduced inversion 3.4.
+It is not critical for the operation but it is better to have it.
+It provides an overview in the docker structure list of what is related to this environment.
+In case you have an older version and for any reason you can't upgrade it, you can reduce the required version but this scenario is not covered here.
+
+=== Memory
+In case you have 8GB RAM and at least 4GB RAM free, you should not face any issue with the environment.
+4GB is a minimum but you should take into consideration that this docker environment is not the only stuff utilizing the RAM on the system, it means that for someone with total 4GB RAM it can work fine but someone else may face issues with the lack of free memory...
+
+=== Internet connection
+You need an active internet connection (additional cost can apply in case you pay by transferred data) for downloading the files in order to get the environment ready. Once you download everything required it can be run / operated offline.
+
+There is a need to have available images for PostgreSQL (repository, in some chapters also resource for provisioning), LDAP (in some chapters resource for provisioning) and of course image with midpoint instance.
+These files are downloaded only in case that the images are not available locally so once downloaded no internet connection is needed to run the environment even in case of recreating docker containers (normal docker behavior).
+
+== Source file with samples
+The sample files used in the https://docs.evolveum.com/book/[Midpoint Book] are availbale in https://github.com/Evolveum/midpoint-samples/tree/master/samples/book[midpoint samples repository @ github].
+
+These files are defined with localhost as host for the resource definition.
+It is absolutely ok in general but for this environment small updates respecting docker environment have to be done.
+The goal is to do as minimum changes to the sample files as possible.
+In other words we are using the "generic" sample files and not defining the new ones derived from them.
+In case you would prefer bare installation without utilization of docker you will get the same result using the sample files in it.
+In this context using docker environment it has no additional value in comparison to bare installation, it just makes it easier for you to try it.
+
+=== Customization required by docker environment
+With utilizing of the docker concept there are separated containers for midpoint and other services (e.g. LDAP, repository - PostgreSQL).
+There is defined bridge (internal network) for the containers to be able to communicate.
+
+One of the impact of this approach is that each container has its own address.
+The "localhost" address in the resource definition is not valid for this scenario.
+This case is automatically handled for you so no extra action is needed.
+As the resource definitions are imported there are extra one time tasks which make just the necessarry modification - host parameter change.
+
+== How to get the files
+As the files are handled in repository you can easily checkout the repository or download repository snapshot as zip file.
+
+.git checkout
+[source]
+git checkout https://github.com/Evolveum/midpoint-docker.git
+
+In case you prefer snapshot (archive) you can click on https://github.com/Evolveum/midpoint-docker/archive/master.zip[*Code - Download ZIP*] on repository's https://github.com/Evolveum/midpoint-docker/[main page].
+
+== Run the environment
+Once you have the files ready,you can run the environment.
+You need to change directory to the *book* in the checkouted structure or in the destination where you have extracted the files.
+
+There will be following files next to other directories :
+[source]
+docker-compose-chapter2.yml
+docker-compose-chapter4.yml
+docker-compose-chapter5.yml
+docker-compose-chapter6.yml
+docker-compose-chapter7.yml
+docker-compose-chapter8.yml
+
+Once you want to run environment related to the specific chapter, you can use following command (example for chapter2):
+
+[source]
+docker-compose -f docker-compose-chapter2.yml up
+
+You will see the logs (outputs from the containers) prefixed by the container name. To stop the environment press [CTRL-C].
+
+
+To run environment in background you can add parameter *-d*
+
+[source]
+docker-compose -f docker-compose-chapter2.yml up -d
+
+In this case you neither see the logs nor the environment can be stopped by the [CTRL-C] combination.
+To stop the environment you should run:
+[source]
+docker-compose -f docker-compose-chapter2.yml down
+
+With this command or [CTRL+C] combination in previous option the containers are stopped but the volumes (data) is not removed.
+Once the dockers are run again, all the changes you did will be available.
+
+In case you want to remove all the relevant stuff from docker environment (there will be no impact on the file you have downloaded / checked out from the repository) you can run
+[source]
+docker-compose -f docker-compose-chapter2.yml down -v
+

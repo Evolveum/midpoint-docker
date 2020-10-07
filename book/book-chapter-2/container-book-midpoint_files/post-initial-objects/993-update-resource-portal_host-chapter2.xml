@@ -1,0 +1,41 @@
+<s:pipeline xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+	xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+	xmlns:s="http://midpoint.evolveum.com/xml/ns/public/model/scripting-3"
+	xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+	xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+	xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+	xmlns:icscdbtable="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-databasetable/org.identityconnectors.databasetable.DatabaseTableConnector">
+	<s:search >
+		<s:options>
+			<option>
+				<options>
+					<raw>true</raw>
+				</options>
+			</option>
+		</s:options>
+		<s:type>c:ResourceType</s:type>
+		<s:searchFilter>
+			<q:equal>
+				<q:path>name</q:path>
+				<q:value>Portal</q:value>
+			</q:equal>
+		</s:searchFilter>
+	</s:search>
+	<s:action>
+		<s:type>modify</s:type>
+		<s:parameter>
+			<s:name>delta</s:name>
+			<c:value>
+				<s:itemDelta>
+					<t:modificationType>replace</t:modificationType>
+					<t:path>c:connectorConfiguration/icfc:configurationProperties/icscdbtable:host</t:path>
+					<t:value>book-postgresql-crm-chapter-2</t:value>
+				</s:itemDelta>
+			</c:value>
+		</s:parameter>
+	</s:action>
+	<s:action>
+<!--		<s:type>testResource</s:type>	-->
+		<s:type>test-resource</s:type>
+	</s:action>
+</s:pipeline>

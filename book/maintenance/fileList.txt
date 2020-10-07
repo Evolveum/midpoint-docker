@@ -1,0 +1,41 @@
+2 - midpoint resources https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/hr.csv
+2 101 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/resource-csv-hr.xml
+2 102 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/resource-openldap.xml
+2 103 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/resource-crm.xml
+2 104 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/resource-portal.xml
+#2 201 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/task-hr-import.xml
+
+4 - midpoint resources https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/hr.csv
+4 101 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/resource-csv-hr.xml
+4 201 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/task-hr-import.xml
+
+5 - midpoint resources https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/hr.csv
+5 101 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/resource-csv-hr.xml
+5 102 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/resource-openldap.xml
+5 - ldap custom https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/ldap-real.ldif
+
+6 - midpoint schema https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/6/extension-example.xsd
+
+7 - midpoint resources https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/7/rms.csv
+7 - midpoint resources https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/hr.csv
+7 101 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/resource-csv-hr.xml
+7 201 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/task-hr-import.xml
+7 102 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/2/resource-crm.xml
+7 103 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/5/resource-openldap.xml
+7 301 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/7/role-business-analyst.xml
+7 302 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/7/role-clerk.xml
+7 303 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/7/role-supervisor.xml
+7 104 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/7/resource-csv-rms.xml
+
+8 - midpoint schema https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/extension-example.xsd
+8 - midpoint resources https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/hr.csv
+8 051 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/object-template-user.xml
+8 101 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/resource-crm.xml
+8 102 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/resource-csv-hr.xml
+8 103 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/resource-openldap.xml
+8 301 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/role-cook.xml
+8 302 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/role-employee.xml
+8 303 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/role-hatter.xml 
+8 304 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/role-sales-agent.xml
+8 305 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/role-sales-assistant.xml
+8 306 midpoint post-initial-objects https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2-M3/samples/book/8/role-sales-manager.xml

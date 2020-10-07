@@ -1,0 +1,23 @@
+<s:search xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+	xmlns:s="http://midpoint.evolveum.com/xml/ns/public/model/scripting-3"
+	xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+	xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3">
+	<s:options>
+		<option>
+			<options>
+				<raw>true</raw>
+			</options>
+		</option>
+	</s:options>
+	<s:type>c:ResourceType</s:type>
+	<s:searchFilter>
+		<q:equal>
+			<q:path>name</q:path>
+			<q:value>HR System</q:value>
+		</q:equal>
+	</s:searchFilter>
+	<s:action>
+<!--		<s:type>testResource</s:type>	-->
+		<s:type>test-resource</s:type>
+	</s:action>
+</s:search>
