@@ -64,7 +64,10 @@ In case you prefer snapshot (archive) you can click on https://github.com/Evolve
 
 == Run the environment
 Once you have the files ready,you can run the environment.
+
 You need to change directory to the *book* in the checkouted structure or in the destination where you have extracted the files.
+[source]
+cd book
 
 There will be following files next to other directories :
 [source]
