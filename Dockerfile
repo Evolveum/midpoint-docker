@@ -6,7 +6,7 @@ LABEL Vendor="evolveum"
 LABEL ImageType="base"
 LABEL ImageName="midpoint"
 LABEL ImageOS="ubuntu:18.04"
-LABEL Version="latest"
+LABEL Version="4.2"
 
 # Install Java
 
@@ -25,7 +25,7 @@ RUN chmod 755 /usr/local/bin/log-timezone.sh \
 
 # Build arguments
 
-ARG MP_VERSION=latest
+ARG MP_VERSION=4.2
 ARG MP_DIST_FILE=midpoint-dist.tar.gz
 
 ENV MP_DIR /opt/midpoint
