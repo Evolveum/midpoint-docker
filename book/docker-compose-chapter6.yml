@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   postgresql-midpoint:
-    image: postgres:12-alpine
+    image: postgres:13-alpine
     container_name: book-postgresql-midpoint-chapter-6
     environment:
       - POSTGRES_PASSWORD_FILE=/run/secrets/mp_database_password.txt
@@ -18,7 +18,7 @@ services:
       - pg-midpoint_data:/var/lib/postgresql/data
 
   midpoint:
-    image: evolveum/midpoint:${MP_VERSION:-4.2-M3}-alpine
+    image: evolveum/midpoint:${MP_VERSION:-4.2}-alpine
     container_name: book-midpoint-chapter-6
     ports:
       - "8080:8080"
