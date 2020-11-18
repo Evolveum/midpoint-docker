@@ -1,0 +1,62 @@
+:toc: left
+:toclevels: 4
+:author: Kamil Jires
+
+= Maintenance directory 
+
+== Before you start
+
+Content of this folder may be used for maintenance Activities.
+It is not needed for regular usage of dockers related to the book chapters.
+
+== Content of the directory
+
+* download-object.sh
+
+is processing for the `fileList.txt` file.
+This file searches for the location and it expects the file `fileList.txt` to be in the same directory.
+Then it processes the file.
+Based on the content of the list it can download the files from the github ( https://github.com/Evolveum/midpoint-samples ) if missing.
+It is downloaded and placed with proper prefix in the expected location to be mounted to the container.
+
+The location, the prefix and the relevant chapter are all provided in the `fileList.txt`.
+
+In case the option `-c` is used the files known in the `fileList.txt` file will be deleted.
+This processs may have impact only on the files which can be downloaded again.
+
+It is also possible to provide parameter with the number, which mean to process the specific chaper only.
+ 
+* fileList.txt
+
+Each line of the file contain information about one file to be checked.
+The row can be commented by character `#` at the beginning of the row.
+
+|===
+|Label | mandatory / optional | e.g.
+
+| Chapter id
+| mandatory
+| 2
+
+| prefix
+| optional
+| 101 ; *-* for "not set"
+
+| container identification
+| mandatory
+| midpoint
+
+| destination
+| mandatory
+| post-initial-objects
+
+| location
+| mandatory
+| https://raw.githubusercontent.com/Evolveum/midpoint-samples/v4.2/samples/book/2/resource-csv-hr.xml
+|===
+
+* gen-secrets
+
+This file doesn't need to be run.
+The purpose is to process docker-compose file and in case it would find reference for DB password file or keystore it would generate it.
+The use case when it is needed to have it in advance, even before first run, is clustered scenarios, which is not used in the book chatpters so far.
