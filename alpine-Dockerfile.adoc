@@ -1,0 +1,97 @@
+:toc: left
+:toclevels: 4
+:author: Kamil Jires
+
+= Dockerfile-alpine
+
+This file describes Dockerfile-alpine, which is defined and used to generate a docker image with midpoint based on an alpine image.
+
+== Image description
+
+For this image a https://docs.docker.com/develop/develop-images/multistage-build/[multi-stage builds] approach is used.
+The result is that temporary file downloaded for the image is collected in the first stage and only necessary data are copied to the next stage - final image.
+
+The midpoint's native https://wiki.evolveum.com/display/midPoint/Post-initial+import[post-initial-objects] are utilized in Docker style approach using available wrapper script - this will be explained separately.
+
+The image extends docker image based on ubuntu which has its own https://wiki.evolveum.com/display/midPoint/Dockerized+midPoint[wiki page].
+
+== default credentials
+
+The default login information comes from the default initial objects.
+
+|===
+|Username|Password
+
+|administrator
+|5ecr3t
+|===
+
+The default URL to access the midpoint interface is http://localhost:8080/[http://localhost:8080].
+
+== post-initial-objects
+
+There are two basic options how to handle initial objects.
+
+- Everything is placed directly in the docker image
+
+In this option you can freely create new instance from the image / container as all the files are read only located in the image.
+All the containers are in principle separated from each other so there will be no interaction on file level.
+
+With this approach you can place *post-initial-objects* directly to the location *<midpoint home>/var/[post-initial-objects,resources,schema,...]* in the docker image.
+
+- There is a mounted directory from the file system
+
+In case you prefer more dynamic option you can mount directory directly to the container so even with more scenarios you can still use the same image for the containers.
+
+Once the midpoint processes the file, it is renamed - the .done extension is added.
+This behaviour could be the issue in case of mounted directory especially in the situation, where you want to discard the container and create new one from the original image.
+New container would see it as done even the processing was realized by the former container.
+
+As a workaround there is prepared wrapper script in the image, which checks the path */opt/midpoint-dirs-docker-entrypoint* for the mounted files with post-initial-objects.
+Once the content is found, the files are checked for the existence in "native" path for the midpoint and if it is missing in the destination, a copy of the file will be made.
+
+This script expects correct structure of the files and it is not _bulled proof_ - it should just cover docker (re-play) approach in case of mounted directory.
+
+The script is defined in Dockerfile for the image build as *midpoint-dirs-docker-entrypoint.sh*.
+It is set as `command` option in the image so in case you would just create container or run the existing one the script is executed.
+The "original" command /usr/local/bin/startup.sh (as defined in ubuntu based image) is called at the end of the script.
+
+./usr/local/bin/midpoint-dirs-docker-entrypoint.sh
+[source]
+#!/bin/sh
+if [ -e /opt/midpoint-dirs-docker-entrypoint ] ; then
+    echo "Processing midpoint-dirs-docker-entrypoint directory..."
+    for i in $( find /opt/midpoint-dirs-docker-entrypoint -mindepth 1 -maxdepth 1 -type d ) ; do
+        l_name=$(basename ${i})
+        [ ! -e ${MP_DIR}/var/${l_name} ] && mkdir -p ${MP_DIR}/var/${l_name}
+        for s in $( find ${i} -mindepth 1 -maxdepth 1 -type f -exec basename \{\} \; ) ; do
+            if [ ! -e ${MP_DIR}/var/${l_name}/${s} -a ! -e ${MP_DIR}/var/${l_name}/${s}.done ]
+            then
+                echo "COPY ${i}/${s} => ${MP_DIR}/var/${l_name}/${s}"
+                cp ${i}/${s} ${MP_DIR}/var/${l_name}/${s}
+            else
+                echo "SKIP: ${i}/${s}"
+            fi
+        done
+    done
+	echo "- - - - - - - - - - - - - - - - - - - - -"
+fi
+/usr/local/bin/startup.sh
+
+There is no problem in case of not utilizing this feature.
+Missing files or already existing files will not cause any action during the test on file presence and "regular" midpoint start will be realized.
+
+== Image volumes
+
+There are two volumes defined in the image available.
+
+- /opt/midpoint/var
+
+Volume for the home directory of midpoint.
+This volume could be used in case you want to keep data for midpoint even with re-creating the container.
+The volume contains setting of the midpoint located on the filesystem (e.g. keystore, schema, db connection setting) or log files.
+
+- /opt/midpoint-dirs-docker-entrypoint
+
+It can be used for mounting directory with to specifig customization of the container / instance of midpoint.
+This behaviour is described in <<#_post_initial_objects, separate chapter>>.

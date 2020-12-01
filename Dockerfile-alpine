@@ -1,0 +1,72 @@
+FROM alpine:latest
+
+ARG MP_VERSION=latest
+
+RUN apk --update add --no-cache curl libxml2-utils curl bash
+
+ADD https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/download-midpoint \
+  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/common.bash \
+  /opt/
+
+RUN chmod 755 /opt/download-midpoint && \
+  sed -i "s/\.\[0-9\]/.[\\\-M0-9]/" /opt/download-midpoint && \
+  /opt/download-midpoint ${MP_VERSION} && \
+  mkdir /opt/midpoint && \
+  tar -xzC /opt/midpoint -f /opt/midpoint-dist.tar.gz --strip-components=1 
+
+FROM alpine:latest
+
+ENV JAVA_HOME=/usr/lib/jvm/default-jvm \
+ REPO_DATABASE_TYPE=h2 \
+ REPO_JDBC_URL=default \
+ REPO_HOST=localhost \
+ REPO_PORT=default \
+ REPO_DATABASE=midpoint \
+ REPO_MISSING_SCHEMA_ACTION=create \
+ REPO_UPGRADEABLE_SCHEMA_ACTION=stop \
+ MP_MEM_MAX=2048m \
+ MP_MEM_INIT=1024m \
+ TZ=UTC \
+ MP_DIR=/opt/midpoint
+
+COPY --from=0 /opt/midpoint /opt/midpoint/
+
+ADD https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/healthcheck.sh \
+  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/log-timezone.sh \
+  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/startup.sh \
+  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/start-midpoint.sh \
+  /usr/local/bin/
+
+ADD https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/mp-dir/repository-url \
+  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/common.bash \
+  /opt/midpoint/
+
+RUN apk --update add --no-cache openjdk11-jre-headless curl libxml2-utils tzdata bash && \
+  echo $'#!/bin/sh\n\
+if [ -e /opt/midpoint-dirs-docker-entrypoint ] ; then\n\
+	echo "Processing midpoint-dirs-docker-entrypoint directory..."\n\
+	for i in $( find /opt/midpoint-dirs-docker-entrypoint -mindepth 1 -maxdepth 1 -type d ) ; do\n\
+		l_name=$(basename ${i})\n\
+		[ ! -e ${MP_DIR}/var/${l_name} ] && mkdir -p ${MP_DIR}/var/${l_name}\n\
+                for s in $( find ${i} -mindepth 1 -maxdepth 1 -type f -exec basename \{\} \; ) ; do \n\
+                        if [ ! -e ${MP_DIR}/var/${l_name}/${s} -a ! -e ${MP_DIR}/var/${l_name}/${s}.done ]\n\
+                        then\n\
+				echo "COPY ${i}/${s} => ${MP_DIR}/var/${l_name}/${s}"\n\
+                                cp ${i}/${s} ${MP_DIR}/var/${l_name}/${s}\n\
+			else\n\
+				echo "SKIP: ${i}/${s}"\n\
+                        fi\n\
+                done\n\
+        done\n\
+	echo "- - - - - - - - - - - - - - - - - - - - -"\n\
+fi\n\n/usr/local/bin/startup.sh' >/usr/local/bin/midpoint-dirs-docker-entrypoint.sh && \
+  chmod 755 /usr/local/bin/*.sh /opt/midpoint/repository-url
+
+VOLUME ${MP_DIR}/var
+
+HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/healthcheck.sh
+
+EXPOSE 8080
+
+CMD ["/usr/local/bin/midpoint-dirs-docker-entrypoint.sh"]
+
