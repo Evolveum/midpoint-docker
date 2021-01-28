@@ -35,7 +35,7 @@ There is a need to have available images for PostgreSQL (repository, in some cha
 These files are downloaded only in case that the images are not available locally so once downloaded no internet connection is needed to run the environment even in case of recreating docker containers (normal docker behavior).
 
 == Source file with samples
-The sample files used in the https://docs.evolveum.com/book/[Midpoint Book] are availbale in https://github.com/Evolveum/midpoint-samples/tree/master/samples/book[midpoint samples repository @ github].
+The sample files used in the https://docs.evolveum.com/book/[Midpoint Book] are available in https://github.com/Evolveum/midpoint-samples/tree/master/samples/book[midpoint samples repository @ github].
 
 These files are defined with localhost as host for the resource definition.
 It is absolutely ok in general but for this environment small updates respecting docker environment have to be done.
