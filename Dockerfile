@@ -15,7 +15,7 @@ RUN if [ "$SKIP_DOWNLOAD" = "0" ];  \
 	 && echo "Downloading the application..." \
          && ${MP_DIR}/download-midpoint ${MP_VERSION} ${MP_DIST_FILE}; \
     else \
-	 echo "Download of th eapplication has been skipped..." \
+	 echo "Download of th eapplication has been skipped..."; \
     fi
 
 RUN echo 'Extracting midPoint archive...' \
