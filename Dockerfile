@@ -1,9 +1,12 @@
+ARG MP_VERSION=latest
 ARG MP_DIR=/opt/midpoint
+ARG base_image=ubuntu
+ARG base_image_tag=18.04
 
-FROM ubuntu:18.04
+FROM ${base_image}:${base_image_tag}
 
 ARG MP_DIR
-ARG MP_VERSION=latest
+ARG MP_VERSION
 ARG MP_DIST_FILE=midpoint-dist.tar.gz
 ARG SKIP_DOWNLOAD=0
 
@@ -15,7 +18,7 @@ RUN if [ "$SKIP_DOWNLOAD" = "0" ];  \
 	 && echo "Downloading the application..." \
          && ${MP_DIR}/download-midpoint ${MP_VERSION} ${MP_DIST_FILE}; \
     else \
-	 echo "Download of th eapplication has been skipped..."; \
+	 echo "Download of the application has been skipped..."; \
     fi
 
 RUN echo 'Extracting midPoint archive...' \
@@ -24,17 +27,22 @@ RUN echo 'Extracting midPoint archive...' \
 RUN echo "Cleaning up temporary files..." \
       && rm -f  ${MP_DIR}/${MP_DIST_FILE}* ${MP_DIR}/download-midpoint ${MP_DIR}/common.bash
 
-FROM ubuntu:18.04
+FROM ${base_image}:${base_image_tag}
 
 ARG MP_DIR
+ARG MP_VERSION
+ARG base_image
+ARG base_image_tag
+ARG maintainer=evolveum
+ARG imagename=midpoint
 
 MAINTAINER info@evolveum.com
 
-LABEL Vendor="evolveum"
+LABEL Vendor="${maintainer}"
 LABEL ImageType="base"
-LABEL ImageName="midpoint"
-LABEL ImageOS="ubuntu:18.04"
-LABEL Version="latest"
+LABEL ImageName="${imagename}"
+LABEL ImageOS="${base_image}:${base_image_tag}"
+LABEL Version="${MP_VERSION}"
 
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \
   MP_DIR=${MP_DIR} \

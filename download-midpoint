@@ -8,7 +8,7 @@ else
   MP_VERSION=$tag
 fi
 
-fileName=${2:-"midpoint-dist.tar.gz"}
+fileName=${2:-"midpoint-dist-${MP_VERSION}.tar.gz"}
 groupId="com.evolveum.midpoint"
 artifactId="dist"
 classifier="-dist"
@@ -33,14 +33,20 @@ fi
 
 echo "Downloading midPoint $MP_VERSION from $URL"
 echo "-----------------------------------------"
-curl -k --output $DIR/${fileName} "$URL"
+if [ -e $DIR/${fileName} ]
+then
+	curl -k -R --output $DIR/${fileName} --time-cond $DIR/${fileName} "$URL"
+else
+	curl -k -R --output $DIR/${fileName} "$URL"
+fi
 echo "-----------------------------------------"
 echo "Checking the download..."
 if tar -tf $DIR/${fileName} >/dev/null; then
   echo "OK"
   exit 0
 else
-  echo "The file was not downloaded correctly"
+  rm $DIR/${fileName}
+  echo "The file was not downloaded correctly - downloaded data has been removed"
   exit 1
 fi
 
