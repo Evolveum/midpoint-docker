@@ -16,6 +16,7 @@ while getopts "nhr?" opt; do
          echo "Cleaning up $maintainer/$imagename:$tag..."
          docker rm -f $(docker ps -a | grep $maintainer/$imagename:$tag | awk '{print $1}')
          docker rmi -f $maintainer/$imagename:$tag
+	 docker image prune -f
          echo "Done"
        fi
        REFRESH="--no-cache --pull"
@@ -32,7 +33,7 @@ while getopts "nhr?" opt; do
        ;;
     esac
 done
-if [ "$SKIP_DOWNLOAD" = "0" ]; then ./download-midpoint || exit 1; fi
+if [ "$SKIP_DOWNLOAD" = "0" ]; then ./download-midpoint "${tag}" || exit 1; fi
 docker build $REFRESH --network host --tag $maintainer/$imagename:$tag --build-arg maintainer=$maintainer --build-arg imagename=$imagename --build-arg SKIP_DOWNLOAD=1 . || exit 1
 echo "---------------------------------------------------------------------------------------"
 echo "The midPoint containers were successfully built. To start them, execute the following:"

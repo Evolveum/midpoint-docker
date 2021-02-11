@@ -81,6 +81,7 @@ pipeline {
 			sh 'docker rm -v -f $(docker ps -a -q)'
 			sh 'docker volume prune -f'
 			sh 'docker rmi $(docker images -a -q)'
+			sh 'docker image prune -f'
                     } catch (error) {
                         def error_details = readFile('./debug')
                         def message = "CLEANUP ERROR: There was a problem cleaning up ${imagename}:${tag}. \n\n ${error_details}"

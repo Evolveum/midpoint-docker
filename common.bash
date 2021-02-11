@@ -1,3 +1,5 @@
 maintainer="evolveum"
 imagename="midpoint"
 tag="latest"
+base_image=""
+base_imave_tag=""
