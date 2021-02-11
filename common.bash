@@ -1,5 +1,5 @@
 maintainer="evolveum"
 imagename="midpoint"
-tag="4.0.3"
+tag="4.0.2"
 base_image="ubuntu"
 base_image_tag="18.04"
