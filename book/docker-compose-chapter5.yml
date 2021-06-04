@@ -18,7 +18,7 @@ services:
       - pg-midpoint_data:/var/lib/postgresql/data
 
   ldap:
-    image: osixia/openldap:1.3.0
+    image: osixia/openldap:stable
     container_name: book-ldap-chapter-5
     entrypoint: [ "/container/tool/run", "--copy-service" ]
     ports:

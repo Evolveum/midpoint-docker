@@ -33,7 +33,7 @@ services:
       - ./book-chapter-common/container-book-postgres-crm_files:/docker-entrypoint-initdb.d/:ro
 
   ldap:
-    image: osixia/openldap:1.3.0
+    image: osixia/openldap:stable
     container_name: book-ldap-chapter-8
     entrypoint: [ "/container/tool/run", "--copy-service" ]
     ports:
