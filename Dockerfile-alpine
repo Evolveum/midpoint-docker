@@ -48,7 +48,7 @@ if [ -e /opt/midpoint-dirs-docker-entrypoint ] ; then\n\
 	for i in $( find /opt/midpoint-dirs-docker-entrypoint -mindepth 1 -maxdepth 1 -type d ) ; do\n\
 		l_name=$(basename ${i})\n\
 		[ ! -e ${MP_DIR}/var/${l_name} ] && mkdir -p ${MP_DIR}/var/${l_name}\n\
-                for s in $( find ${i} -mindepth 1 -maxdepth 1 -type f -exec basename \{\} \; ) ; do \n\
+                for s in $( find ${i} -mindepth 1 -maxdepth 1 -type f -follow -exec basename \{\} \; ) ; do \n\
                         if [ ! -e ${MP_DIR}/var/${l_name}/${s} -a ! -e ${MP_DIR}/var/${l_name}/${s}.done ]\n\
                         then\n\
 				echo "COPY ${i}/${s} => ${MP_DIR}/var/${l_name}/${s}"\n\
