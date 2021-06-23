@@ -64,7 +64,7 @@ COPY container_files/mp-dir/ ${MP_DIR}/
 
 RUN sed 's/main$/main universe/' -i /etc/apt/sources.list \
   && apt-get update -y \
-  && apt-get install -y openjdk-11-jre tzdata \
+  && apt-get install -y openjdk-11-jre tzdata curl \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
   && chmod 755 /usr/local/bin/* \
