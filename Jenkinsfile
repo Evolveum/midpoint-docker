@@ -67,7 +67,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://registry.hub.docker.com/', "DockerHub") {
-                        def baseImg = docker.build("$maintainer/$imagename", "--network host .")
+			def baseImg = docker.image("$maintainer/$imagename:$tag")
                         baseImg.push("$tag")
                     }
                 }
