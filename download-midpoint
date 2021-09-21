@@ -23,7 +23,7 @@ if [[ "${MP_VERSION}" == "latest" ]] ; then
   buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
   URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/${artifactId}-${MP_VERSION%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
 
-elif [[ $MP_VERSION =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+elif [[ $MP_VERSION =~ ^[0-9]+(\.[\-M0-9]+)+$ ]]; then
   repo="releases"
   URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/${artifactId}-${MP_VERSION}${classifier}.${type}"
 else

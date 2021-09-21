@@ -1,22 +1,51 @@
-FROM alpine:latest
-
 ARG MP_VERSION=latest
+ARG MP_DIR=/opt/midpoint
+ARG base_image=alpine
+ARG base_image_tag=latest
+ARG java_home=/usr/lib/jvm/default-jvm
+ARG MP_DIST_FILE=midpoint-dist.tar.gz
+ARG SKIP_DOWNLOAD=0
+ARG maintainer=evolveum
+ARG imagename=midpoint
 
-RUN apk --update add --no-cache curl libxml2-utils curl bash
+FROM ${base_image}:${base_image_tag}
 
-ADD https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/download-midpoint \
-  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/common.bash \
-  /opt/
+ARG MP_VERSION
+ARG MP_DIR
+ARG MP_DIST_FILE
+ARG SKIP_DOWNLOAD
 
-RUN chmod 755 /opt/download-midpoint && \
-  sed -i "s/\.\[0-9\]/.[\\\-M0-9]/" /opt/download-midpoint && \
-  /opt/download-midpoint ${MP_VERSION} && \
-  mkdir /opt/midpoint && \
-  tar -xzC /opt/midpoint -f /opt/midpoint-dist.tar.gz --strip-components=1 
+RUN if [ "${base_image}" = "alpine" ]; \
+  then apk --update add --no-cache libxml2-utils curl bash ; \
+  else apt-get update -y && apt-get install -y curl libxml2-utils ; \
+  fi
 
-FROM alpine:latest
+COPY download-midpoint common.bash ${MP_DIST_FILE}* ${MP_DIR}/
 
-ENV JAVA_HOME=/usr/lib/jvm/default-jvm \
+RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
+  then chmod 755 ${MP_DIR}/download-midpoint && \
+       ${MP_DIR}/download-midpoint ${MP_VERSION} ${MP_DIST_FILE} ; \
+  fi ; \
+  tar -xzC ${MP_DIR} -f ${MP_DIR}/${MP_DIST_FILE} --strip-components=1 ; \
+  rm -f ${MP_DIR}/${MP_DIST_FILE}* ${MP_DIR}/download-midpoint ${MP_DIR}/common.bash
+
+FROM ${base_image}:${base_image_tag}
+
+ARG MP_DIR
+ARG MP_VERSION
+ARG base_image
+ARG base_image_tag
+ARG maintainer
+ARG imagename
+
+LABEL Vendor="${maintainer}"
+LABEL ImageType="base"
+LABEL ImageName="${imagename}"
+LABEL ImageOS="${base_image}:${base_image_tag}"
+LABEL Version="${MP_VERSION}"
+LABEL org.opencontainers.image.authors="info@evolveum.com"
+
+ENV JAVA_HOME=${java_home} \
  REPO_DATABASE_TYPE=h2 \
  REPO_JDBC_URL=default \
  REPO_HOST=localhost \
@@ -27,39 +56,20 @@ ENV JAVA_HOME=/usr/lib/jvm/default-jvm \
  MP_MEM_MAX=2048m \
  MP_MEM_INIT=1024m \
  TZ=UTC \
- MP_DIR=/opt/midpoint
+ MP_DIR=${MP_DIR} \
+ JAVA_OPTS="-Dmidpoint.repository.hibernateHbm2ddl=none -Dmidpoint.repository.initializationFailTimeout=60000 -Dfile.encoding=UTF8 -Dmidpoint.logging.alt.enabled=true"
 
-COPY --from=0 /opt/midpoint /opt/midpoint/
+COPY container_files/usr-local-bin/* /usr/local/bin/
+COPY container_files/mp-dir/ ${MP_DIR}/
 
-ADD https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/healthcheck.sh \
-  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/log-timezone.sh \
-  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/startup.sh \
-  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/usr-local-bin/start-midpoint.sh \
-  /usr/local/bin/
-
-ADD https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/container_files/mp-dir/repository-url \
-  https://raw.githubusercontent.com/Evolveum/midpoint-docker/master/common.bash \
-  /opt/midpoint/
-
-RUN apk --update add --no-cache openjdk11-jre-headless curl libxml2-utils tzdata bash && \
-  echo $'#!/bin/sh\n\
-if [ -e /opt/midpoint-dirs-docker-entrypoint ] ; then\n\
-	echo "Processing midpoint-dirs-docker-entrypoint directory..."\n\
-	for i in $( find /opt/midpoint-dirs-docker-entrypoint -mindepth 1 -maxdepth 1 -type d ) ; do\n\
-		l_name=$(basename ${i})\n\
-		[ ! -e ${MP_DIR}/var/${l_name} ] && mkdir -p ${MP_DIR}/var/${l_name}\n\
-                for s in $( find ${i} -mindepth 1 -maxdepth 1 -type f -follow -exec basename \{\} \; ) ; do \n\
-                        if [ ! -e ${MP_DIR}/var/${l_name}/${s} -a ! -e ${MP_DIR}/var/${l_name}/${s}.done ]\n\
-                        then\n\
-				echo "COPY ${i}/${s} => ${MP_DIR}/var/${l_name}/${s}"\n\
-                                cp ${i}/${s} ${MP_DIR}/var/${l_name}/${s}\n\
-			else\n\
-				echo "SKIP: ${i}/${s}"\n\
-                        fi\n\
-                done\n\
-        done\n\
-	echo "- - - - - - - - - - - - - - - - - - - - -"\n\
-fi\n\n/usr/local/bin/startup.sh' >/usr/local/bin/midpoint-dirs-docker-entrypoint.sh && \
+RUN if [ "${base_image}" = "alpine" ]; \
+  then apk --update add --no-cache openjdk11-jre-headless curl libxml2-utils tzdata bash ; \
+  else sed 's/main$/main universe/' -i /etc/apt/sources.list && \
+       apt-get update -y && \
+       apt-get install -y openjdk-11-jre tzdata && \
+       apt-get clean && \
+       rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* ; \
+  fi ; \
   chmod 755 /usr/local/bin/*.sh /opt/midpoint/repository-url
 
 VOLUME ${MP_DIR}/var
@@ -69,4 +79,6 @@ HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/hea
 EXPOSE 8080
 
 CMD ["/usr/local/bin/midpoint-dirs-docker-entrypoint.sh"]
+
+COPY --from=0 ${MP_DIR} ${MP_DIR}/
 

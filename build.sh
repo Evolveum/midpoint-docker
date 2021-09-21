@@ -33,8 +33,18 @@ while getopts "nhr?" opt; do
        ;;
     esac
 done
-if [ ${SKIP_DOWNLOAD} -eq 0 ]; then ./download-midpoint "${tag}" "midpoint-dist-${tag}.tar.gz" || exit 1; fi
-docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${tag} \
+
+# the defaults for ubuntu
+java_home_arg="/usr/lib/jvm/java-11-openjdk-amd64"
+tag_suffix=""
+if [ "${base_image}" = "alpine" ]
+then
+	java_home_arg="/usr/lib/jvm/default-jvm"
+	tag_suffix="-alpine"
+fi
+
+if [ ${SKIP_DOWNLOAD} -eq 0 -o ! -e midpoint-dist-${tag}.tar.gz ]; then ./download-midpoint "${tag}" "midpoint-dist-${tag}.tar.gz" || exit 1; fi
+docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${tag}${tag_suffix} \
 	--build-arg maintainer="${maintainer}" \
 	--build-arg imagename="${imagename}" \
 	--build-arg SKIP_DOWNLOAD=1 \
@@ -42,6 +52,7 @@ docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${tag} \
 	--build-arg MP_VERSION=${tag} \
 	--build-arg base_image="${base_image}" \
 	--build-arg base_image_tag="${base_image_tag}" \
+	--build-arg java_home="${java_home_arg}" \
 	. || exit 1
 if [ ${SKIP_DOWNLOAD} -eq 0 ]; then rm "midpoint-dist-${tag}.tar.gz"; fi
 docker image prune -f
@@ -50,7 +61,7 @@ echo "The midPoint containers were successfully built. To start them, execute th
 echo ""
 echo "(for image)"
 echo ""
-echo "$ docker run -p 8080:8080 --name midpoint ${maintainer}/${imagename}:${tag}"
+echo "$ docker run -p 8080:8080 --name midpoint ${maintainer}/${imagename}:${tag}${tag_suffix}"
 echo ""
 echo "(for demo postgresql, clustering, extrepo and simple)"
 echo ""
