@@ -9,6 +9,7 @@ else
 fi
 
 fileName=${2:-"midpoint-dist-${MP_VERSION}.tar.gz"}
+dry_run=${3:-0}
 groupId="com.evolveum.midpoint"
 artifactId="dist"
 classifier="-dist"
@@ -16,23 +17,40 @@ type="tar.gz"
 base="https://nexus.evolveum.com/nexus/repository"
 groupIdUrl="${groupId//.//}"
 filename="${artifactId}-${MP_VERSION}${classifier}.${type}"
-if [[ "${MP_VERSION}" == "latest" ]] ; then
-  repo="snapshots"
-  MP_VERSION=$(xmllint --xpath "string(//latest)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
-  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
-  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/maven-metadata.xml"))
-  URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/${artifactId}-${MP_VERSION%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
 
-elif [[ $MP_VERSION =~ ^[0-9]+(\.[\-M0-9]+)+$ ]]; then
+MP_VER=""
+URL=""
+if [[ "${MP_VERSION}" != "latest" ]] ; then
   repo="releases"
-  URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VERSION}/${artifactId}-${MP_VERSION}${classifier}.${type}"
-else
+  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
+  [[ "${MP_VER}" == "" ]] && \
+	  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}" | grep -v "\-M" | tail -1)
+  [[ "${MP_VER}" != "" ]] && URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
+fi
+if [[ "${URL}" == "" ]] ; then
+  repo="snapshots"
+  if [[ "${MP_VERSION}" == "latest" ]] ; then
+	  MP_VER=$(xmllint --xpath "string(//latest)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
+  else
+	  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
+	  [[ "${MP_VER}" == "" ]] && \
+		  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}" | tail -1)
+  fi
+  if [ "${MP_VER}" != "" ] ; then
+	  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/maven-metadata.xml"))
+	  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/maven-metadata.xml"))
+	  URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
+  fi
+fi
+
+if [[ "${URL}" == "" ]] ; then
   echo "Unknown tag"
   exit 1
 fi
 
-echo "Downloading midPoint $MP_VERSION from $URL"
-echo "-----------------------------------------"
+echo "Downloading midPoint $MP_VERSION (${fileName}) from $URL"
+echo "--------------------------------------------------------------------"
+[ ${dry_run} -eq 1 ] && exit 0
 if [ -e $DIR/${fileName} ]
 then
 	curl -k -R --output $DIR/${fileName} --time-cond $DIR/${fileName} "$URL"
@@ -49,4 +67,3 @@ else
   echo "The file was not downloaded correctly - downloaded data has been removed"
   exit 1
 fi
-

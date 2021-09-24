@@ -1,12 +1,21 @@
 ARG MP_VERSION=latest
 ARG MP_DIR=/opt/midpoint
-ARG base_image=ubuntu
-ARG base_image_tag=18.04
-ARG java_home=/usr/lib/jvm/java-11-openjdk-amd64
 ARG MP_DIST_FILE=midpoint-dist.tar.gz
 ARG SKIP_DOWNLOAD=0
 ARG maintainer=evolveum
 ARG imagename=midpoint
+
+### values for Ubuntu based image ###
+ARG base_image=ubuntu
+ARG base_image_tag=18.04
+ARG java_home=/usr/lib/jvm/java-11-openjdk-amd64
+####################################
+
+### values for Alpine based image ###
+# ARG base_image=alpine
+# ARG base_image_tag=latest
+# ARG java_home=/usr/lib/jvm/default-jvm
+#####################################
 
 FROM ${base_image}:${base_image_tag}
 
