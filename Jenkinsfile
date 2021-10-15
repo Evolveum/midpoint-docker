@@ -4,6 +4,7 @@ pipeline {
         maintainer = "e"
         imagename = 'm'
         tag = 'l'
+	imagetag = 'i'
     }
     stages {
         stage ('Setting build context') {
@@ -11,18 +12,27 @@ pipeline {
                 script {
                     maintainer = maintain()
                     imagename = imagename()
-                    if (env.BRANCH_NAME == "master") {
-                       tag = "latest"
-                    } else {
+		    imagetag = imagetag()
+//                    if (env.BRANCH_NAME == "master") {
+//                       tag = "latest"
+//                    } else {
                        tag = tag()
-                    }
+//                    }
                     if (!imagename) {
                         echo "You must define imagename in common.bash"
                         currentBuild.result = 'FAILURE'
                     }
+                    if (!imagetag) {
+                        echo "You must define imagetag in common.bash"
+                        currentBuild.result = 'FAILURE'
+                    }
+                    if (!tag) {
+                        echo "You must define tag in common.bash"
+                        currentBuild.result = 'FAILURE'
+                    }
                     // Build and test scripts expect that 'tag' is present in common.bash. This is necessary for both Jenkins and standalone testing.
                     // We don't care if there are more 'tag' assignments there. The latest one wins.
-                    sh "echo >> common.bash ; echo \"tag=\\\"${tag}\\\"\" >> common.bash ; echo common.bash ; cat common.bash"
+//                    sh "echo >> common.bash ; echo \"tag=\\\"${tag}\\\"\" >> common.bash ; echo common.bash ; cat common.bash"
                 }  
             }
         }    
@@ -67,8 +77,8 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://registry.hub.docker.com/', "DockerHub") {
-			def baseImg = docker.image("$maintainer/$imagename:$tag")
-                        baseImg.push("$tag")
+			def baseImg = docker.image("$maintainer/$imagename:${imagetag}")
+                        baseImg.push("$imagetag")
                     }
                 }
             }
@@ -115,6 +125,11 @@ def imagename() {
 
 def tag() {
     def matcher = readFile('common.bash') =~ 'tag="(.+)"'
+    matcher ? matcher[0][1] : latest
+}
+
+def imagetag() {
+    def matcher = readFile('common.bash') =~ 'image_tag="(.+)"'
     matcher ? matcher[0][1] : latest
 }
 

@@ -1,6 +1,6 @@
 maintainer="evolveum"
 imagename="midpoint"
-tag="latest"
+tag="4.4-RC1"
 base_image="ubuntu"
 base_image_tag="18.04"
-image_tag="snapshot"
+image_tag="4.4-RC1"

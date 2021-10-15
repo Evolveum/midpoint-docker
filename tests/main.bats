@@ -4,11 +4,11 @@ load ../common
 load ../library
 
 @test "010 Image is present" {
-    docker image inspect evolveum/midpoint:$tag
+    docker image inspect evolveum/midpoint:${image_tag:-${tag}-${base_image}}
 }
 
 @test "020 Check basic components" {
-    docker run -i $maintainer/$imagename:$tag \
+    docker run -i $maintainer/$imagename:${image_tag:-${tag}-${base_image}} \
 	find \
 		/usr/local/bin/startup.sh \
 		/opt/midpoint/var/

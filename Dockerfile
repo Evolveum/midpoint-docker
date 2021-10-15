@@ -56,13 +56,10 @@ LABEL Version="${MP_VERSION}"
 LABEL org.opencontainers.image.authors="info@evolveum.com"
 
 ENV JAVA_HOME=${java_home} \
- REPO_DATABASE_TYPE=h2 \
- REPO_JDBC_URL=default \
- REPO_HOST=localhost \
- REPO_PORT=default \
- REPO_DATABASE=midpoint \
- REPO_MISSING_SCHEMA_ACTION=create \
- REPO_UPGRADEABLE_SCHEMA_ACTION=stop \
+ MP_SET_midpoint_repository_database=h2 \
+ MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
+ MP_SET_midpoint_repository_missingSchemaAction=create \
+ MP_SET_midpoint_repository_upgradeableSchemaAction=stop \
  MP_MEM_MAX=2048m \
  MP_MEM_INIT=1024m \
  TZ=UTC \
@@ -88,7 +85,7 @@ HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/hea
 
 EXPOSE 8080
 
-CMD ["/usr/local/bin/midpoint-dirs-docker-entrypoint.sh"]
+CMD [ "${MP_DIR}/bin/midpoint.sh", "start" ]
 
 COPY --from=0 ${MP_DIR} ${MP_DIR}/
 
