@@ -51,6 +51,10 @@ load ../../../library
 }
 
 @test "350 Test DB schema version check" {
+    echo "status before test..."
+    docker ps -a
+    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "\dt"
+
     echo "Removing version information from m_global_metadata"
     PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
 

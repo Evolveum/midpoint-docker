@@ -44,7 +44,7 @@ pipeline {
                         //sh ' ./build.sh -r 2>&1 | tee -a debug ; test ${PIPESTATUS[0]} -eq 0 '
                     } catch (error) {
                         def error_details = readFile('./debug')
-                        def message = "BUILD ERROR: There was a problem building ${imagename}:${tag}. \n\n ${error_details}"
+                        def message = "BUILD ERROR: There was a problem building ${imagename}:${imagetag} \n\n ${error_details}"
                         sh "rm -f ./debug"
                         handleError(message)
                     }
@@ -66,7 +66,7 @@ pipeline {
                         //sh '(cd demo/clustering ; bats tests ) 2>&1 | tee -a debug ; test ${PIPESTATUS[0]} -eq 0'
                     } catch (error) {
                         def error_details = readFile('./debug')
-                        def message = "BUILD ERROR: There was a problem testing ${imagename}:${tag}. \n\n ${error_details}"
+                        def message = "BUILD ERROR: There was a problem testing ${imagename}:${imagetag}. \n\n ${error_details}"
                         sh "rm -f ./debug"
                         handleError(message)
                     }
@@ -94,7 +94,7 @@ pipeline {
 			sh 'docker image prune -f'
                     } catch (error) {
                         def error_details = readFile('./debug')
-                        def message = "CLEANUP ERROR: There was a problem cleaning up ${imagename}:${tag}. \n\n ${error_details}"
+                        def message = "CLEANUP ERROR: There was a problem cleaning up ${imagename}:${imagetag}. \n\n ${error_details}"
                         sh "rm -f ./debug"
                         echo "${message}"
                     }
