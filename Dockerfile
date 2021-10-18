@@ -98,6 +98,7 @@ RUN echo "fix for starting midpoint around release 4.2..." ; \
   sed -i "s/^[[:space:]]*-jar \"\${BASE_DIR}\/lib\/midpoint.war\"/    -cp \"\${BASE_DIR}\/lib\/midpoint.war\"/g" /usr/local/bin/midpoint.sh ; \
   echo "\"old\" -cp style start found and updated..." ; \
   fi ; \
+  echo "end of fix check..." ; \
   if [ $(grep -c container ${MP_DIR}/bin/midpoint.sh) -eq 0 ]; then \
   cp /usr/local/bin/midpoint.sh ${MP_DIR}/bin/midpoint.sh && echo "midpoint.sh file replaced" ; fi 
 

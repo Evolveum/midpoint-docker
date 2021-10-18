@@ -4,11 +4,11 @@ load ../../../common
 load ../../../library
 
 @test "000 Cleanup before running the tests" {
-    run docker-compose -f docker-compose-tests.yml down -v
+    run docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down -v
 }
 
 @test "010 Initialize and start midPoint" {
-    docker-compose -f docker-compose-tests.yml up --build -d
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml up --build -d
     wait_for_midpoint_start postgresql_midpoint_server_1
 }
 
@@ -39,11 +39,11 @@ load ../../../library
     search_and_check_object users test300
 
     echo "Bringing the containers down"
-    docker-compose -f docker-compose-tests.yml down
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down
 
     echo "Re-creating the containers"
-    docker-compose -f docker-compose-tests.yml up --no-start
-    docker-compose -f docker-compose-tests.yml start
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml up --no-start
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml start
     wait_for_midpoint_start postgresql_midpoint_server_1
 
     echo "Searching for the user again"
@@ -59,10 +59,10 @@ load ../../../library
     PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
 
     echo "Bringing the containers down"
-    docker-compose -f docker-compose-tests.yml down
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down
 
     echo "Re-creating the containers"
-    docker-compose -f docker-compose-tests.yml up -d
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml up -d
 
     wait_for_log_message postgresql_midpoint_server_1 "Database schema is not compatible with the executing code; however, an upgrade path is available."
 }
@@ -89,5 +89,5 @@ load ../../../library
 #}
 
 @test "999 Clean up" {
-    docker-compose -f docker-compose-tests.yml down -v
+    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down -v
 }

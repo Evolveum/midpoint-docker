@@ -58,9 +58,10 @@ pipeline {
                         sh 'echo Docker containers before root tests ; docker ps -a'		// temporary
                         sh 'OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(bats tests ) 2>&1 | tee debug ; test ${PIPESTATUS[0]} -eq 0'
-                        sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
 
+                        sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
                         sh 'cd demo/postgresql; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
+
                         //sh 'cd demo/clustering; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(cd demo/postgresql ; bats tests ) 2>&1 | tee -a debug ; test ${PIPESTATUS[0]} -eq 0'
                         //sh '(cd demo/clustering ; bats tests ) 2>&1 | tee -a debug ; test ${PIPESTATUS[0]} -eq 0'
@@ -108,7 +109,7 @@ pipeline {
             echo 'Done Building.'
         }
         failure {
-            handleError("BUILD ERROR: There was a problem building ${maintainer}/${imagename}:${tag}.")
+            handleError("BUILD ERROR: There was a problem building ${maintainer}/${imagename}:${imagetag}.")
         }
     }
 }
@@ -129,7 +130,7 @@ def tag() {
 }
 
 def imagetag() {
-    def matcher = readFile('common.bash') =~ 'image_tag="(.+)"'
+    def matcher = readFile('common.bash') =~ '^image_tag="(.+)"'
     matcher ? matcher[0][1] : latest
 }
 
