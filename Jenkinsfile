@@ -130,7 +130,7 @@ def tag() {
 }
 
 def imagetag() {
-    def matcher = readFile('common.bash') =~ '^image_tag="(.+)"'
+    def matcher = readFile('common.bash') =~ 'docker_image_tag="(.+)"'
     matcher ? matcher[0][1] : latest
 }
 

@@ -20,7 +20,7 @@ services:
      - midpoint_data:/var/lib/postgresql/data
 
   midpoint_server:
-    image: evolveum/midpoint:${image_tag:-latest}
+    image: evolveum/midpoint:${docker_image_tag:-latest}
     depends_on:
      - midpoint_data
     ports:
