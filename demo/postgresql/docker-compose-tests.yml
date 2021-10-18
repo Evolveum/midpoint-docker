@@ -27,19 +27,13 @@ services:
       - 8180:8080
     environment:
      - MP_SET_midpoint_repository_database=postgresql
+     - MP_SET_midpoint_repository_hibernateHbm2ddl
      - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
      - MP_SET_midpoint_repository_jdbcUsername=midpoint
      - MP_SET_midpoint_repository_jdbcPassword_FILE=/run/secrets/mp_database_password.txt
-     - MP_SET_midpoint_repository_missingSchemaAction
-     - MP_SET_midpoint_repository_upgradeableSchemaAction
-     - MP_SET_midpoint_repository_schemaVersionIfMissing
-     - MP_SET_midpoint_repository_schemaVariant
+     - MP_SET_midpoint_repository_missingSchemaAction=create
      - MP_SET_midpoint_keystore_keyStorePassword_FILE=/run/secrets/mp_keystore_password.txt
      - MP_ENTRY_POINT=/opt/midpoint-dirs-docker-entrypoint
-     - MP_MEM_MAX
-     - MP_MEM_INIT
-     - JAVA_OPTS
-     - TZ
     networks:
      - net
     secrets:

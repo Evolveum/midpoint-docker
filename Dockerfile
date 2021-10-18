@@ -58,13 +58,16 @@ LABEL org.opencontainers.image.authors="info@evolveum.com"
 ENV JAVA_HOME=${java_home} \
  MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
+ MP_SET_midpoint_repository_hibernateHbm2ddl=none \
+ MP_SET_midpoint_repository_initializationFailTimeout=60000 \
  MP_SET_midpoint_repository_missingSchemaAction=create \
  MP_SET_midpoint_repository_upgradeableSchemaAction=stop \
+ MP_SET_file_encoding=UTF8 \
+ MP_SET_midpoint_logging_alt_enabled=true \
  MP_MEM_MAX=2048m \
  MP_MEM_INIT=1024m \
  TZ=UTC \
- MP_DIR=${MP_DIR} \
- JAVA_OPTS="-Dmidpoint.repository.hibernateHbm2ddl=none -Dmidpoint.repository.initializationFailTimeout=60000 -Dfile.encoding=UTF8 -Dmidpoint.logging.alt.enabled=true"
+ MP_DIR=${MP_DIR}
 
 COPY container_files/usr-local-bin/* /usr/local/bin/
 COPY container_files/mp-dir/ ${MP_DIR}/
@@ -85,7 +88,16 @@ HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/hea
 
 EXPOSE 8080
 
-CMD [ "${MP_DIR}/bin/midpoint.sh", "start" ]
+CMD [ "/opt/midpoint/bin/midpoint.sh", "container" ]
 
 COPY --from=0 ${MP_DIR} ${MP_DIR}/
+
+RUN echo "fix for starting midpoint around release 4.2..." ; \
+  if [ $(grep -c "\-cp \"\${BASE_DIR}/lib/midpoint.war\"" ${MP_DIR}/bin/midpoint.sh ) -eq 1 ] ; then \
+  sed -i "/^[[:space:]]*-jar \"\${BASE_DIR}\/lib\/midpoint.war\"/a \ \ \ \ -Dloader.path=\"WEB-INF/classes,WEB-INF/lib,WEB-INF/lib-provided,${MP_DIR}/lib/\" org.springframework.boot.loader.PropertiesLauncher \\\\" /usr/local/bin/midpoint.sh ; \
+  sed -i "s/^[[:space:]]*-jar \"\${BASE_DIR}\/lib\/midpoint.war\"/    -cp \"\${BASE_DIR}\/lib\/midpoint.war\"/g" /usr/local/bin/midpoint.sh ; \
+  echo "\"old\" -cp style start found and updated..." ; \
+  fi ; \
+  if [ $(grep -c container ${MP_DIR}/bin/midpoint.sh) -eq 0 ]; then \
+  cp /usr/local/bin/midpoint.sh ${MP_DIR}/bin/midpoint.sh && echo "midpoint.sh file replaced" ; fi 
 
