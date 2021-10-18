@@ -4,11 +4,11 @@ load ../common
 load ../library
 
 @test "010 Image is present" {
-    docker image inspect evolveum/midpoint:${image_tag:-${tag}-${base_image}}
+    docker image inspect evolveum/midpoint:${docker_image_tag:-${tag}-${base_image}}
 }
 
 @test "020 Check basic components" {
-    docker run -i $maintainer/$imagename:${image_tag:-${tag}-${base_image}} \
+    docker run -i $maintainer/$imagename:${docker_image_tag:-${tag}-${base_image}} \
 	find \
 		/usr/local/bin/startup.sh \
 		/opt/midpoint/var/
@@ -19,7 +19,7 @@ load ../library
 }
 
 @test "010 Initialize and start midPoint" {
-    MP_CONTAINER_ID=$(docker run -d -p 8180:8080 --name midpoint evolveum/midpoint)
+    MP_CONTAINER_ID=$(docker run -d -p 8180:8080 --name midpoint evolveum/midpoint:${docker_image_tag:-${tag}-${base_image}})
     wait_for_midpoint_start $MP_CONTAINER_ID
 }
 
@@ -46,11 +46,11 @@ load ../library
 
 @test "910 Cleanup before further tests - demo/postgresql" {
     docker ps -a
-    cd demo/postgresql ; docker-compose down -v ; true
+    cd demo/postgresql ; docker-compose -env-file ../../common.bash down -v ; true
 }
 
 @test "911 Cleanup before further tests - demo/clustering" {
     docker ps -a
-    cd demo/clustering ; docker-compose down -v ; true
+    cd demo/clustering ; docker-compose -env-file ../../common.bash down -v ; true
 }
 
