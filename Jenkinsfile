@@ -5,6 +5,7 @@ pipeline {
         imagename = 'm'
         tag = 'l'
 	imagetag = 'i'
+	db = 'd'
     }
     stages {
         stage ('Setting build context') {
@@ -13,6 +14,7 @@ pipeline {
                     maintainer = maintain()
                     imagename = imagename()
 		    imagetag = imagetag()
+		    db = db()
 //                    if (env.BRANCH_NAME == "master") {
 //                       tag = "latest"
 //                    } else {
@@ -58,6 +60,8 @@ pipeline {
                         sh 'echo Docker containers before root tests ; docker ps -a'		// temporary
                         sh 'OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(bats tests ) 2>&1 | tee debug ; test ${PIPESTATUS[0]} -eq 0'
+
+			sh '[ "${db}" = "native" ] && cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml && echo "Going \"native\"..."'
 
                         sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
                         sh 'cd demo/postgresql; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
@@ -112,6 +116,11 @@ pipeline {
             handleError("BUILD ERROR: There was a problem building ${maintainer}/${imagename}:${imagetag}.")
         }
     }
+}
+
+def db() {
+    def matcher = readFile('common.bash') =~ 'db="(.+)"'
+    matcher ? matcher[0][1] : generic
 }
 
 def maintain() {

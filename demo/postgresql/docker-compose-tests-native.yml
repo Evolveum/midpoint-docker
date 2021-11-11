@@ -4,8 +4,21 @@
 version: "3.3"
 
 services:
+  data_init:
+    image: evolveum/midpoint:${docker_image_tag:-latest}
+    command: [ "/opt/midpoint/bin/midpoint.sh", "init-native" ]
+    environment:
+     - MP_INIT_DB_CONCAT=/opt/db-init/init.sql
+     - MP_INIT_CFG=/opt/mp-home
+     - MP_INIT_LOOP=1
+    volumes:
+     - db_init:/opt/db-init
+     - midpoint_home:/opt/mp-home
+
   midpoint_data:
     image: postgres:13-alpine
+    depends_on:
+     - data_init
     environment:
      - POSTGRES_PASSWORD_FILE=/run/secrets/mp_database_password.txt
      - POSTGRES_USER=midpoint
@@ -18,11 +31,13 @@ services:
      - mp_database_password.txt
     volumes:
      - midpoint_data:/var/lib/postgresql/data
+     - db_init:/docker-entrypoint-initdb.d/
 
   midpoint_server:
     image: evolveum/midpoint:${docker_image_tag:-latest}
     command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
     depends_on:
+     - data_init
      - midpoint_data
     ports:
       - 8180:8080
@@ -33,7 +48,7 @@ services:
      - MP_SET_midpoint_repository_jdbcPassword_FILE=/run/secrets/mp_database_password.txt
      - MP_SET_midpoint_repository_missingSchemaAction=create
      - MP_SET_midpoint_keystore_keyStorePassword_FILE=/run/secrets/mp_keystore_password.txt
-     - MP_UNSET_midpoint_repository_hibernateHbm2ddl
+     - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
      - MP_NO_ENV_COMPAT=1
      - MP_ENTRY_POINT=/opt/midpoint-dirs-docker-entrypoint
     networks:
@@ -56,5 +71,6 @@ secrets:
     file: ./configs-and-secrets/midpoint/keystore_password.txt
     
 volumes:
+  db_init:
   midpoint_data:
   midpoint_home:
