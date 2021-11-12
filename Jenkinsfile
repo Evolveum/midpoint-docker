@@ -61,7 +61,17 @@ pipeline {
                         sh 'OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(bats tests ) 2>&1 | tee debug ; test ${PIPESTATUS[0]} -eq 0'
 
-			sh '[ "${db}" = "native" ] && cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml && echo "Going \"native\"..."'
+			sh """
+set +e
+if [ \"${db}\" = \"native\" ]
+then
+	cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml
+	echo \"Going native...\"
+else
+	echo \"Continue with generic...\"
+fi
+echo \"DB structure check is done...\"
+"""
 
                         sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
                         sh 'cd demo/postgresql; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
