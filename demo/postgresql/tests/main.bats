@@ -39,7 +39,7 @@ load ../../../library
     search_and_check_object users test300
 
     echo "Bringing the containers down"
-    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down
+    docker-compose -f docker-compose-tests.yml down
 
     echo "Re-creating the containers"
     docker-compose --env-file ../../common.bash -f docker-compose-tests.yml up --no-start
@@ -59,7 +59,7 @@ load ../../../library
     PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
 
     echo "Bringing the containers down"
-    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down
+    docker-compose -f docker-compose-tests.yml down
 
     echo "Re-creating the containers"
     docker-compose --env-file ../../common.bash -f docker-compose-tests.yml up -d
@@ -89,5 +89,5 @@ load ../../../library
 #}
 
 @test "999 Clean up" {
-    docker-compose --env-file ../../common.bash -f docker-compose-tests.yml down -v
+    docker-compose -f docker-compose-tests.yml down -v
 }
