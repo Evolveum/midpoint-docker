@@ -46,11 +46,11 @@ load ../library
 
 @test "910 Cleanup before further tests - demo/postgresql" {
     docker ps -a
-    cd demo/postgresql ; docker-compose -env-file ../../common.bash down -v ; true
+    cd demo/postgresql ; docker-compose --env-file ../../common.bash down -v ; true
 }
 
 @test "911 Cleanup before further tests - demo/clustering" {
     docker ps -a
-    cd demo/clustering ; docker-compose -env-file ../../common.bash down -v ; true
+    cd demo/clustering ; docker-compose --env-file ../../common.bash down -v ; true
 }
 
