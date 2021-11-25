@@ -16,8 +16,8 @@ cat common.bash
 
 sed -i "s/^tag=.*/tag=${B_TAG}/" common.bash
 
-bi="$( echo -n "${B_BASE_IMAGE}" | cut -d : -f 1 )"
-bit="$( echo -n "${B_BASE_IMAGE}" | cut -d : -f 2 )"
+bi="\$( echo -n "${B_BASE_IMAGE}" | cut -d : -f 1 )"
+bit="\$( echo -n "${B_BASE_IMAGE}" | cut -d : -f 2 )"
 sed -i "s/^base_image=.*/base_image=\${bi}/" common.bash
 sed -i "s/^base_image_tag=.*/base_image_tag=\${bit}/" common.bash
 
