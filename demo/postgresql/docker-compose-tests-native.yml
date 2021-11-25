@@ -78,7 +78,7 @@ services:
      - MP_SET_midpoint_repository_jdbcUsername=midpoint
      - MP_SET_midpoint_repository_jdbcPassword_FILE=/opt/db-pw/dbpassword
      - MP_SET_midpoint_repository_missingSchemaAction=create
-     - MP_SET_midpoint_keystore_keyStorePassword_FILE=/opt/midpoint/var/keystorepw
+     - MP_SET_midpoint_keystore_keyStorePassword_FILE=/opt/db-pw/keystorepw
      - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
      - MP_NO_ENV_COMPAT=1
      - MP_ENTRY_POINT=/opt/midpoint-dirs-docker-entrypoint
