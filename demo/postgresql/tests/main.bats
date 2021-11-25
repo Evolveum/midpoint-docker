@@ -53,10 +53,10 @@ load ../../../library
 @test "350 Test DB schema version check" {
     echo "status before test..."
     docker ps -a
-    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "\dt"
+    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql-midpoint_data-1 psql -U midpoint midpoint -c "\dt"
 
     echo "Removing version information from m_global_metadata"
-    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
+    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql-midpoint_data-1 psql -U midpoint midpoint -c "drop table m_global_metadata"
 
     echo "Bringing the containers down"
     docker-compose -f docker-compose-tests.yml down
@@ -72,11 +72,11 @@ load ../../../library
 #    docker stop postgresql-midpoint_server-1
 #
 #    echo "Installing empty 3.8 repository"
-#    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec -it postgresql_midpoint_data_1 psql -U midpoint template1 -c "DROP DATABASE midpoint"
+#    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec -it postgresql-midpoint_data-1 psql -U midpoint template1 -c "DROP DATABASE midpoint"
 #    curl https://raw.githubusercontent.com/Evolveum/midpoint/v3.8/config/sql/_all/sql/_all/postgresql-3.8-all.sql > /tmp/create-3.8.sql
-#    docker cp /tmp/create-3.9-utf8mb4.sql postgresql_midpoint_data_1:/tmp/create-3.8.sql
-#    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec -it postgresql_midpoint_data_1 psql -U midpoint template1 -c "CREATE DATABASE midpoint WITH OWNER = midpoint ENCODING = 'UTF8' TABLESPACE = pg_default LC_COLLATE = 'en_US.utf8' LC_CTYPE = 'en_US.utf8' CONNECTION LIMIT = -1;"
-#    docker exec postgresql_midpoint_data_1 bash -c "PGPASSWORD=WJzesbe3poNZ91qIbmR7 && psql -U midpoint -d  midpoint < /tmp/create-3.8.sql"
+#    docker cp /tmp/create-3.9-utf8mb4.sql postgresql-midpoint_data-1:/tmp/create-3.8.sql
+#    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec -it postgresql-midpoint_data-1 psql -U midpoint template1 -c "CREATE DATABASE midpoint WITH OWNER = midpoint ENCODING = 'UTF8' TABLESPACE = pg_default LC_COLLATE = 'en_US.utf8' LC_CTYPE = 'en_US.utf8' CONNECTION LIMIT = -1;"
+#    docker exec postgresql-midpoint_data-1 bash -c "PGPASSWORD=WJzesbe3poNZ91qIbmR7 && psql -U midpoint -d  midpoint < /tmp/create-3.8.sql"
 #
 #    echo "Bringing the containers down"
 #    docker-compose down
