@@ -51,6 +51,7 @@ load ../../../library
 }
 
 @test "350 Test DB schema version check" {
+    if [ "${db:-}" = "native" ] ; then skip ; fi
     echo "status before test..."
     docker ps -a
     PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql-midpoint_data-1 psql -U midpoint midpoint -c "\dt"
