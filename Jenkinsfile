@@ -1,5 +1,5 @@
 pipeline {
-    agent { label "slave01" }
+    agent any 
     environment { 
         maintainer = "e"
         imagename = 'm'
@@ -27,7 +27,6 @@ sed -i "s/^db=.*/db=\\\"${B_DB}\\\"/" common.bash
 
 cat common.bash
 
-exit 1
 '''
                     maintainer = maintain()
                     imagename = imagename()
