@@ -26,9 +26,8 @@ sed -i "s/^docker_image_tag=.*/docker_image_tag=${B_DOCKER_TAG}/" common.bash
 sed -i "s/^db=.*/db=\"${B_DB}\"/" common.bash
 
 cat common.bash
-
-exit 1
 '''
+			currentBuild.result = 'FAILURE'
                     maintainer = maintain()
                     imagename = imagename()
 		    imagetag = imagetag()
