@@ -56,21 +56,20 @@ LABEL Version="${MP_VERSION}"
 LABEL org.opencontainers.image.authors="info@evolveum.com"
 
 ENV JAVA_HOME=${java_home} \
- REPO_DATABASE_TYPE=h2 \
- REPO_JDBC_URL=default \
- REPO_HOST=localhost \
- REPO_PORT=default \
- REPO_DATABASE=midpoint \
- REPO_MISSING_SCHEMA_ACTION=create \
- REPO_UPGRADEABLE_SCHEMA_ACTION=stop \
+ MP_SET_midpoint_repository_database=h2 \
+ MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
+ MP_SET_midpoint_repository_hibernateHbm2ddl=none \
+ MP_SET_midpoint_repository_initializationFailTimeout=60000 \
+ MP_SET_midpoint_repository_missingSchemaAction=create \
+ MP_SET_midpoint_repository_upgradeableSchemaAction=stop \
+ MP_SET_file_encoding=UTF8 \
+ MP_SET_midpoint_logging_alt_enabled=true \
  MP_MEM_MAX=2048m \
  MP_MEM_INIT=1024m \
  TZ=UTC \
- MP_DIR=${MP_DIR} \
- JAVA_OPTS="-Dmidpoint.repository.hibernateHbm2ddl=none -Dmidpoint.repository.initializationFailTimeout=60000 -Dfile.encoding=UTF8 -Dmidpoint.logging.alt.enabled=true"
+ MP_DIR=${MP_DIR}
 
 COPY container_files/usr-local-bin/* /usr/local/bin/
-COPY container_files/mp-dir/ ${MP_DIR}/
 
 RUN if [ "${base_image}" = "alpine" ]; \
   then apk --update add --no-cache openjdk11-jre-headless curl libxml2-utils tzdata bash ; \
@@ -79,8 +78,7 @@ RUN if [ "${base_image}" = "alpine" ]; \
        apt-get install -y openjdk-11-jre tzdata && \
        apt-get clean && \
        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* ; \
-  fi ; \
-  chmod 755 /usr/local/bin/*.sh /opt/midpoint/repository-url
+  fi
 
 VOLUME ${MP_DIR}/var
 
@@ -88,7 +86,17 @@ HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/hea
 
 EXPOSE 8080
 
-CMD ["/usr/local/bin/midpoint-dirs-docker-entrypoint.sh"]
+CMD [ "/opt/midpoint/bin/midpoint.sh", "container" ]
 
 COPY --from=0 ${MP_DIR} ${MP_DIR}/
+
+RUN echo "fix for starting midpoint around release 4.2..." ; \
+  if [ $(grep -c "\-cp \"\${BASE_DIR}/lib/midpoint.war\"" ${MP_DIR}/bin/midpoint.sh ) -eq 1 ] ; then \
+  sed -i "/^[[:space:]]*-jar \"\${BASE_DIR}\/lib\/midpoint.war\"/a \ \ \ \ -Dloader.path=\"WEB-INF/classes,WEB-INF/lib,WEB-INF/lib-provided,${MP_DIR}/lib/\" org.springframework.boot.loader.PropertiesLauncher \\\\" /usr/local/bin/midpoint.sh ; \
+  sed -i "s/^[[:space:]]*-jar \"\${BASE_DIR}\/lib\/midpoint.war\"/    -cp \"\${BASE_DIR}\/lib\/midpoint.war\"/g" /usr/local/bin/midpoint.sh ; \
+  echo "\"old\" -cp style start found and updated..." ; \
+  fi ; \
+  echo "end of fix check..." ; \
+  if [ $(grep -c "container" ${MP_DIR}/bin/midpoint.sh) -eq 0 ]; then \
+  cp /usr/local/bin/midpoint.sh ${MP_DIR}/bin/midpoint.sh && echo "midpoint.sh file replaced" ; fi 
 

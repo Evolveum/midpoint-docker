@@ -11,11 +11,11 @@ while getopts "nhr?" opt; do
        SKIP_DOWNLOAD=1
        ;;
     r)
-       result=$(docker ps -a | grep ${maintainer}/${imagename}:${tag})
+       result=$(docker ps -a | grep ${maintainer}/${imagename}:${docker_image_tag})
        if [ ! -z "$result" ]; then
-         echo "Cleaning up ${maintainer}/${imagename}:${tag}..."
-         docker rm -f $(docker ps -a | grep ${maintainer}/${imagename}:${tag} | awk '{print $1}')
-         docker rmi -f ${maintainer}/${imagename}:${tag}
+         echo "Cleaning up ${maintainer}/${imagename}:${docker_image_tag}..."
+         docker rm -f $(docker ps -a | grep ${maintainer}/${imagename}:${docker_image_tag} | awk '{print $1}')
+         docker rmi -f ${maintainer}/${imagename}:${docker_image_tag}
 	 docker image prune -f
          echo "Done"
        fi
@@ -42,7 +42,7 @@ then
 fi
 
 if [ ${SKIP_DOWNLOAD} -eq 0 -o ! -e midpoint-dist-${tag}.tar.gz ]; then ./download-midpoint "${tag}" "midpoint-dist-${tag}.tar.gz" || exit 1; fi
-docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${image_tag:-${tag}-${base_image}} \
+docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${docker_image_tag:-${tag}-${base_image}} \
 	--build-arg maintainer="${maintainer}" \
 	--build-arg imagename="${imagename}" \
 	--build-arg SKIP_DOWNLOAD=1 \
@@ -59,7 +59,7 @@ echo "The midPoint containers were successfully built. To start them, execute th
 echo ""
 echo "(for image)"
 echo ""
-echo "$ docker run -p 8080:8080 --name midpoint ${maintainer}/${imagename}:${image_tag:-${tag}-${base_image}}"
+echo "$ docker run -p 8080:8080 --name midpoint ${maintainer}/${imagename}:${docker_image_tag:-${tag}-${base_image}}"
 echo ""
 echo "(for demo postgresql, clustering, extrepo and simple)"
 echo ""
