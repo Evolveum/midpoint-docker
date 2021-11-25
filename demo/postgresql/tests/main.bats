@@ -9,7 +9,7 @@ load ../../../library
 
 @test "010 Initialize and start midPoint" {
     docker-compose -f docker-compose-tests.yml up --build -d
-    wait_for_midpoint_start postgresql_midpoint_server_1
+    wait_for_midpoint_start postgresql-midpoint_server-1
 }
 
 @test "020 Check health" {
@@ -44,7 +44,7 @@ load ../../../library
     echo "Re-creating the containers"
     docker-compose -f docker-compose-tests.yml up --no-start
     docker-compose -f docker-compose-tests.yml start
-    wait_for_midpoint_start postgresql_midpoint_server_1
+    wait_for_midpoint_start postgresql-midpoint_server-1
 
     echo "Searching for the user again"
     search_and_check_object users test300
@@ -52,7 +52,7 @@ load ../../../library
 
 @test "350 Test DB schema version check" {
     echo "Removing version information from m_global_metadata"
-    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql_midpoint_data_1 psql -U midpoint midpoint -c "drop table m_global_metadata"
+    PGPASSWORD=WJzesbe3poNZ91qIbmR7 && docker exec postgresql-midpoint_data-1 psql -U midpoint midpoint -c "drop table m_global_metadata"
 
     echo "Bringing the containers down"
     docker-compose -f docker-compose-tests.yml down
@@ -60,7 +60,7 @@ load ../../../library
     echo "Re-creating the containers"
     docker-compose -f docker-compose-tests.yml up -d
 
-    wait_for_log_message postgresql_midpoint_server_1 "Database schema is not compatible with the executing code; however, an upgrade path is available."
+    wait_for_log_message postgresql-midpoint_server-1 "Database schema is not compatible with the executing code; however, an upgrade path is available."
 }
 
 #@test "360 Test DB schema upgrade" {
