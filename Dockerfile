@@ -8,7 +8,7 @@ ARG imagename=midpoint
 ### values for Ubuntu based image ###
 ARG base_image=ubuntu
 ARG base_image_tag=18.04
-ARG java_home=/usr/lib/jvm/java-17-openjdk-amd64
+ARG java_home=/usr/lib/jvm/java-11-openjdk-amd64
 ####################################
 
 ### values for Alpine based image ###
@@ -75,7 +75,7 @@ RUN if [ "${base_image}" = "alpine" ]; \
   then apk --update add --no-cache openjdk17-jre-headless curl libxml2-utils tzdata bash ; \
   else sed 's/main$/main universe/' -i /etc/apt/sources.list && \
        apt-get update -y && \
-       apt-get install -y openjdk-17-jre tzdata && \
+       apt-get install -y openjdk-17-jre-headless tzdata && \
        apt-get clean && \
        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* ; \
   fi
