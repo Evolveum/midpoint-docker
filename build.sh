@@ -35,7 +35,7 @@ while getopts "nhr?" opt; do
 done
 
 # the defaults for ubuntu
-java_home_arg="/usr/lib/jvm/java-11-openjdk-amd64"
+java_home_arg="/usr/lib/jvm/java-17-openjdk-amd64"
 if [ "${base_image}" = "alpine" ]
 then
 	java_home_arg="/usr/lib/jvm/default-jvm"

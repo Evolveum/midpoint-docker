@@ -8,7 +8,7 @@ ARG imagename=midpoint
 ### values for Ubuntu based image ###
 ARG base_image=ubuntu
 ARG base_image_tag=18.04
-ARG java_home=/usr/lib/jvm/java-11-openjdk-amd64
+ARG java_home=/usr/lib/jvm/java-17-openjdk-amd64
 ####################################
 
 ### values for Alpine based image ###
