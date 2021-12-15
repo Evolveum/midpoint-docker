@@ -88,6 +88,12 @@ else
 	echo \"Continue with generic...\"
 fi
 echo \"DB structure check is done...\"
+
+if [ \"${B_TEST}\" = \"compat\" ]
+then 
+	cp demo/postgresql/docker-compose-tests-compat.yml demo/postgresql/docker-compose-tests.yml
+	echo \"Backward compatible tests...\"
+fi
 """
 
                         sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
