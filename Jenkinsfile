@@ -27,29 +27,6 @@ sed -i "s/^db=.*/db=\\\"${B_DB}\\\"/" common.bash
 
 cat common.bash
 '''
-		    sh """
-set +e
-if [ \"${db}\" = \"native\" ]
-then
-	cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml
-	echo \"Going native...\"
-else
-	echo \"Continue with generic...\"
-fi
-echo \"DB structure check is done...\"
-
-if [ \"${B_TEST}\" = \"compat\" ]
-then 
-	cp demo/postgresql/docker-compose-tests-compat.yml demo/postgresql/docker-compose-tests.yml
-	echo \"Backward compatible tests...\"
-fi
-
-if [ \"${B_JAVA}\" != \"17\" ]
-then
-	sed -i "s/17-/${B_JAVA}-/g" Dockerfile
-	sed -i "s/17-/${B_JAVA}-/g" build.sh
-fi
-"""
                     maintainer = maintain()
                     imagename = imagename()
 		    imagetag = imagetag()
@@ -74,6 +51,29 @@ fi
                     // Build and test scripts expect that 'tag' is present in common.bash. This is necessary for both Jenkins and standalone testing.
                     // We don't care if there are more 'tag' assignments there. The latest one wins.
 //                    sh "echo >> common.bash ; echo \"tag=\\\"${tag}\\\"\" >> common.bash ; echo common.bash ; cat common.bash"
+		    sh """
+set +e
+if [ \"${db}\" = \"native\" ]
+then
+	cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml
+	echo \"Going native...\"
+else
+	echo \"Continue with generic...\"
+fi
+echo \"DB structure check is done...\"
+
+if [ \"${B_TEST}\" = \"compat\" ]
+then 
+	cp demo/postgresql/docker-compose-tests-compat.yml demo/postgresql/docker-compose-tests.yml
+	echo \"Backward compatible tests...\"
+fi
+
+if [ \"${B_JAVA}\" != \"17\" ]
+then
+	sed -i "s/17-/${B_JAVA}-/g" Dockerfile
+	sed -i "s/17-/${B_JAVA}-/g" build.sh
+fi
+"""
                 }  
             }
         }    
