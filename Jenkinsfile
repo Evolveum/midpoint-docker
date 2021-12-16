@@ -94,6 +94,12 @@ then
 	cp demo/postgresql/docker-compose-tests-compat.yml demo/postgresql/docker-compose-tests.yml
 	echo \"Backward compatible tests...\"
 fi
+
+if [ \"${B_JAVA}\" != \"17\" ]
+then
+	sed -i "s/17-/${B_JAVA}-/g" Dockerfile
+	sed -i "s/17-/${B_JAVA}-/g" build.sh
+fi
 """
 
                         sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
