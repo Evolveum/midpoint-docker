@@ -26,8 +26,30 @@ sed -i "s/^docker_image_tag=.*/docker_image_tag=\\\"${B_DOCKER_TAG}\\\"/" common
 sed -i "s/^db=.*/db=\\\"${B_DB}\\\"/" common.bash
 
 cat common.bash
-
 '''
+		    sh """
+set +e
+if [ \"${db}\" = \"native\" ]
+then
+	cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml
+	echo \"Going native...\"
+else
+	echo \"Continue with generic...\"
+fi
+echo \"DB structure check is done...\"
+
+if [ \"${B_TEST}\" = \"compat\" ]
+then 
+	cp demo/postgresql/docker-compose-tests-compat.yml demo/postgresql/docker-compose-tests.yml
+	echo \"Backward compatible tests...\"
+fi
+
+if [ \"${B_JAVA}\" != \"17\" ]
+then
+	sed -i "s/17-/${B_JAVA}-/g" Dockerfile
+	sed -i "s/17-/${B_JAVA}-/g" build.sh
+fi
+"""
                     maintainer = maintain()
                     imagename = imagename()
 		    imagetag = imagetag()
@@ -77,30 +99,6 @@ cat common.bash
                         sh 'echo Docker containers before root tests ; docker ps -a'		// temporary
                         sh 'OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(bats tests ) 2>&1 | tee debug ; test ${PIPESTATUS[0]} -eq 0'
-
-			sh """
-set +e
-if [ \"${db}\" = \"native\" ]
-then
-	cp demo/postgresql/docker-compose-tests-native.yml demo/postgresql/docker-compose-tests.yml
-	echo \"Going native...\"
-else
-	echo \"Continue with generic...\"
-fi
-echo \"DB structure check is done...\"
-
-if [ \"${B_TEST}\" = \"compat\" ]
-then 
-	cp demo/postgresql/docker-compose-tests-compat.yml demo/postgresql/docker-compose-tests.yml
-	echo \"Backward compatible tests...\"
-fi
-
-if [ \"${B_JAVA}\" != \"17\" ]
-then
-	sed -i "s/17-/${B_JAVA}-/g" Dockerfile
-	sed -i "s/17-/${B_JAVA}-/g" build.sh
-fi
-"""
 
                         sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
                         sh 'cd demo/postgresql; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
