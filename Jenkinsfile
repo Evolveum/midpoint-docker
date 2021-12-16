@@ -121,6 +121,7 @@ fi
                     docker.withRegistry('https://registry.hub.docker.com/', "DockerHub") {
 			def baseImg = docker.image("$maintainer/$imagename:${imagetag}")
                         baseImg.push("$imagetag")
+                        baseImg.push("${B_DOCKER_TAG_ALT}")
                     }
                 }
             }
