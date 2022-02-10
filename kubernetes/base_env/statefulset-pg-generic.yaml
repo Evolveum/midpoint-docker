@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mp-pg-demo
+  namespace: mp-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mp-pg-demo
+  template:
+    metadata:
+      labels:
+        app: mp-pg-demo
+    spec:
+      containers:
+        - name: mp-pg-demo
+          image: 'evolveum/midpoint:4.4-alpine'
+          ports:
+            - name: gui
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MP_SET_midpoint_repository_database
+              value: postgresql
+            - name: MP_SET_midpoint_repository_jdbcUsername
+              value: midpoint
+            - name: MP_SET_midpoint_repository_jdbcPassword
+              value: SuperSecretPassword007
+            - name: MP_SET_midpoint_repository_jdbcUrl
+              value: jdbc:postgresql://mp-demo-db.mp-demo.svc.cluster.local:5432/midpoint
+          imagePullPolicy: IfNotPresent
+  serviceName: mp-pg-demo

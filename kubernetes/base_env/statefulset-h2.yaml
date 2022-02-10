@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mp-h2-demo
+  namespace: mp-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mp-h2-demo
+  template:
+    metadata:
+      labels:
+        app: mp-h2-demo
+    spec:
+      containers:
+        - name: mp-h2-demo
+          image: 'evolveum/midpoint:4.4-alpine'
+          ports:
+            - name: gui
+              containerPort: 8080
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+  serviceName: mp-h2-demo

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mp-h2-demo
+  namespace: mp-demo
+  labels:
+    app: mp-h2-demo
+spec:
+  containers:
+    - name: mp-h2-demo
+      image: 'evolveum/midpoint:4.4-alpine'
+      ports:
+        - name: gui
+          containerPort: 8080
+          protocol: TCP
+      imagePullPolicy: IfNotPresent
+  restartPolicy: Always

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mp-demo-poi
+  namespace: mp-demo
+data:
+  test-user.xml: >
+    <?xml version="1.0" encoding="UTF-8"?>
+    <user>
+      <name>test</name>
+    </user>
+  test2-user.xml: >
+    <?xml version="1.0" encoding="UTF-8"?>
+    <user>
+      <name>test2</name>
+    </user>

@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mp-pg-demo
+  namespace: mp-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mp-pg-demo
+  template:
+    metadata:
+      labels:
+        app: mp-pg-demo
+    spec:
+      volumes:
+        - name: mp-home
+          emptyDir: {}
+        - name: db-pass
+          secret:
+            secretName: mp-demo
+            defaultMode: 420
+        - name: mp-poi
+          configMap:
+            name: mp-demo-poi
+            defaultMode: 420
+      initContainers:
+        - name: mp-config-init
+          image: 'evolveum/midpoint:4.4-alpine'
+          command: ["/bin/bash","/opt/midpoint/bin/midpoint.sh","init-native"]
+          env:
+            - name: MP_INIT_CFG
+              value: /opt/mp-home
+          volumeMounts:
+            - name: mp-home
+              mountPath: /opt/mp-home
+          imagePullPolicy: IfNotPresent
+      containers:
+        - name: mp-pg-demo
+          image: 'evolveum/midpoint:4.4-alpine'
+          ports:
+            - name: gui
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MP_ENTRY_POINT
+              value: /opt/midpoint-dirs-docker-entrypoint
+            - name: MP_SET_midpoint_repository_database
+              value: postgresql
+            - name: MP_SET_midpoint_repository_jdbcUsername
+              value: midpoint
+            - name: MP_SET_midpoint_repository_jdbcPassword_FILE
+              value: /opt/midpoint/config-secrets/password
+            - name: MP_SET_midpoint_repository_jdbcUrl
+              value: jdbc:postgresql://mp-demo-db.mp-demo.svc.cluster.local:5432/midpoint
+            - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
+              value: "1"
+            - name: MP_NO_ENV_COMPAT
+              value: "1"
+          volumeMounts:
+            - name: mp-home
+              mountPath: /opt/midpoint/var
+            - name: db-pass
+              mountPath: /opt/midpoint/config-secrets
+            - name: mp-poi
+              mountPath: /opt/midpoint-dirs-docker-entrypoint/post-initial-objects
+          imagePullPolicy: IfNotPresent
+  serviceName: mp-pg-demo

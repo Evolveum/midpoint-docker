@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mp-pg-demo
+  namespace: mp-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mp-pg-demo
+  template:
+    metadata:
+      labels:
+        app: mp-pg-demo
+    spec:
+      volumes:
+        - name: mp-home
+          emptyDir: {}
+      initContainers:
+        - name: mp-config-init
+          image: 'evolveum/midpoint:4.4-alpine'
+          command: ["/bin/bash","/opt/midpoint/bin/midpoint.sh","init-native"]
+          env:
+            - name: MP_INIT_CFG
+              value: /opt/mp-home
+          volumeMounts:
+            - name: mp-home
+              mountPath: /opt/mp-home
+          imagePullPolicy: IfNotPresent
+      containers:
+        - name: mp-pg-demo
+          image: 'evolveum/midpoint:4.4-alpine'
+          ports:
+            - name: gui
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MP_SET_midpoint_repository_database
+              value: postgresql
+            - name: MP_SET_midpoint_repository_jdbcUsername
+              value: midpoint
+            - name: MP_SET_midpoint_repository_jdbcPassword
+              value: SuperSecretPassword007
+            - name: MP_SET_midpoint_repository_jdbcUrl
+              value: jdbc:postgresql://mp-demo-db.mp-demo.svc.cluster.local:5432/midpoint
+            - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
+              value: "1"
+            - name: MP_NO_ENV_COMPAT
+              value: "1"
+          volumeMounts:
+            - name: mp-home
+              mountPath: /opt/midpoint/var
+          imagePullPolicy: IfNotPresent
+  serviceName: mp-pg-demo
