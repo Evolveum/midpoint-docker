@@ -8,6 +8,7 @@ option 1
 Pod with generic repository in local H2 file.
 
 
+
 kubectl apply -f namespace-mp-demo.yaml -f pod-h2.yaml
 
 kubectl get -n mp-demo namespace/mp-demo pod/mp-h2-demo
@@ -18,6 +19,7 @@ kubectl delete -n mp-demo pod/mp-h2-demo
 option 2 
 
 ... like option 1 but the pod is created using statefulset object
+
 
 
 kubectl apply -f namespace-mp-demo.yaml -f statefulset-h2.yaml
@@ -33,6 +35,7 @@ Dedicated pod with postgresql DB - without native repository DB init (generic re
 Midpoint pointing to the postresql DB using defined service.
 
 
+
 kubectl apply -f namespace-mp-demo.yaml -f statefulset-db-w_o-init.yaml -f service-db.yaml -f statefulset-pg-generic.yaml
 
 kubectl get -n mp-demo namespace/mp-demo statefulset.apps/mp-demo-db statefulset.apps/mp-pg-demo service/mp-demo-db
@@ -46,6 +49,7 @@ Dedicated pod with postgresql DB - with native repository DB structure init.
 Midpoint pointing to the postresql DB using defined service.
 
 
+
 kubectl apply -f namespace-mp-demo.yaml -f statefulset-db-pg-native.yaml -f service-db.yaml -f statefulset-pg-native.yaml
 
 kubectl get -n mp-demo namespace/mp-demo statefulset.apps/mp-demo-db service/mp-demo-db statefulset.apps/mp-pg-demo
@@ -53,7 +57,23 @@ kubectl get -n mp-demo namespace/mp-demo statefulset.apps/mp-demo-db service/mp-
 kubectl delete -n mp-demo statefulset.apps/mp-demo-db service/mp-demo-db statefulset.apps/mp-pg-demo
 
 -------------
-To be able to reach the environment for option 3 or option 4 there are needed few more objects (common for both options)
+option 5 - native repository - Post-init-objects (configmap) and password in secret object
+
+Dedicated pod with postgresql DB - with native repository DB structure init.
+Midpoint pointing to the postresql DB using defined service.
+The password for the DB is not stored in statefulset directly but in dedicated kubernetes object.
+Also example of use of the post initial objects.
+
+
+
+kubectl apply -f namespace-mp-demo.yaml -f configmap-poi.yaml -f ingress-midpoint.yaml -f secret-pw.yaml -f service-midpoint.yaml -f service-db -f statefulset-db-pg-native.yaml -f statefulset-pg-native_cm-sec.yaml
+
+kubectl get -n mp-demo namespace/mp-demo configmap/mp-demo-poi ingress.networking.k8s.io/mp-pg-demo secret/mp-demo service/mp-pg-demo service/mp-demo-db statefulset.apps/mp-demo-db statefulset.apps/mp-pg-demo
+
+kubectl delete -n mp-demo configmap/mp-demo-poi ingress.networking.k8s.io/mp-pg-demo secret/mp-demo service/mp-pg-demo service/mp-demo-db statefulset.apps/mp-demo-db statefulset.apps/mp-pg-demo
+
+-------------
+To be able to reach the environment for option 3 or option 4 there are needed few more objects (common for options 3+)
 
 
 kubectl apply -f service-midpoint.yaml -f secret-cert-mp-pg-demo.yaml -f ingress-midpoint.yaml
