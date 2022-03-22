@@ -7,12 +7,12 @@ load ../library
     docker image inspect evolveum/midpoint:${docker_image_tag:-${tag}-${base_image}}
 }
 
-@test "020 Check basic components" {
-    docker run -i $maintainer/$imagename:${docker_image_tag:-${tag}-${base_image}} \
-	find \
-		/usr/local/bin/startup.sh \
-		/opt/midpoint/var/
-}
+#@test "020 Check basic components" {
+#    docker run -i $maintainer/$imagename:${docker_image_tag:-${tag}-${base_image}} \
+#	find \
+#		/usr/local/bin/startup.sh \
+#		/opt/midpoint/var/
+#}
 
 @test "030 Cleanup before running the tests" {
     docker rm midpoint -v -f || true

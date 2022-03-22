@@ -41,6 +41,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - MP_ENTRY_POINT=/opt/midpoint-dirs-docker-entrypoint
       - REPO_DATABASE_TYPE=postgresql
       - REPO_HOST=book-postgresql-midpoint-chapter-5
       - REPO_DATABASE=midpoint
