@@ -39,8 +39,13 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
   tar -xzC ${MP_DIR} -f ${MP_DIR}/${MP_DIST_FILE} --strip-components=1 ; \
   rm -f ${MP_DIR}/${MP_DIST_FILE}* ${MP_DIR}/download-midpoint ${MP_DIR}/common.bash
 
+##### 2022/05/02 - "reaction" to adding jar package to dist archive ######
+# Once both jar and war is present the only jar is needed. During transition perion the
+# symlink is created to prevent the fails because of not updated starting script
+# ... docker related file have a little bit different lifecycle than midpoint files ...
+##########################################################################
 RUN if [ -e ${MP_DIR}/lib/midpoint.jar -a -e ${MP_DIR}/lib/midpoint.war ]; \
-  then rm ${MP_DIR}/lib/midpoint.war ; fi
+  then ln -sf midpoint.war ${MP_DIR}/lib/midpoint.jar ; fi
 
 FROM ${base_image}:${base_image_tag}
 
