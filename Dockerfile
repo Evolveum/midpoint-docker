@@ -39,6 +39,9 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
   tar -xzC ${MP_DIR} -f ${MP_DIR}/${MP_DIST_FILE} --strip-components=1 ; \
   rm -f ${MP_DIR}/${MP_DIST_FILE}* ${MP_DIR}/download-midpoint ${MP_DIR}/common.bash
 
+RUN if [ -e ${MP_DIR}/lib/midpoint.jar -a -e ${MP_DIR}/lib/midpoint.war ]; \
+  then rm ${MP_DIR}/lib/midpoint.war ; fi
+
 FROM ${base_image}:${base_image_tag}
 
 ARG MP_DIR
