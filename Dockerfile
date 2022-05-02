@@ -44,7 +44,7 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
 # symlink is created to prevent the fails because of not updated starting script
 # ... docker related file have a little bit different lifecycle than midpoint files ...
 ##########################################################################
-RUN if [ -e ${MP_DIR}/lib/midpoint.jar -a -e ${MP_DIR}/lib/midpoint.war ]; \
+RUN if [ -e ${MP_DIR}/lib/midpoint.jar ]; \
   then ln -sf midpoint.war ${MP_DIR}/lib/midpoint.jar ; fi
 
 FROM ${base_image}:${base_image_tag}
