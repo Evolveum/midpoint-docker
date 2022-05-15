@@ -12,7 +12,7 @@ function generic_wait_for_log () {
     FAILURE="$4"
     ADDITIONAL_CONTAINER_NAME=$5
     ATTEMPT=0
-    MAX_ATTEMPTS=20
+    MAX_ATTEMPTS=30
     DELAY=10
 
     until [[ $ATTEMPT = $MAX_ATTEMPTS ]]; do
