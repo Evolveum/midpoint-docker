@@ -45,7 +45,7 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
 # ... docker related file have a little bit different lifecycle than midpoint files ...
 ##########################################################################
 RUN if [ -e ${MP_DIR}/lib/midpoint.jar ]; \
-  then ln -sf midpoint.war ${MP_DIR}/lib/midpoint.jar ; fi
+  then ln -sf midpoint.jar ${MP_DIR}/lib/midpoint.war ; fi
 
 FROM ${base_image}:${base_image_tag}
 
