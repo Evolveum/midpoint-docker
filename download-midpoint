@@ -19,27 +19,46 @@ groupIdUrl="${groupId//.//}"
 filename="${artifactId}-${MP_VERSION}${classifier}.${type}"
 
 MP_VER=""
+l_MP_VER=""
 URL=""
-if [[ "${MP_VERSION}" != "latest" ]] ; then
-  repo="releases"
-  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
-  [[ "${MP_VER}" == "" ]] && \
-	  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}" | grep -v "\-M" | tail -1)
-  [[ "${MP_VER}" != "" ]] && URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
-fi
-if [[ "${URL}" == "" ]] ; then
-  repo="snapshots"
-  if [[ "${MP_VERSION}" == "latest" ]] ; then
-	  MP_VER=$(xmllint --xpath "string(//latest)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
-  else
-	  MP_VER=$(curl -k -s ${base}/${repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
-	  # fall back to provided value... If nothing found we can try directly provided version - in the worst case the URL will not be build up...
-	  [[ "${MP_VER}" == "" ]] && MP_VER=${MP_VERSION}
+
+# check "known" versions from map_midpoint-docker.csv file
+MP_VER=$(grep "^${MP_VERSION}," map_midpoint-docker.csv | cut -d "," -f 2)
+repo=$(grep "^${MP_VERSION}," map_midpoint-docker.csv | cut -d "," -f 3)
+
+[ "${MP_VER}" != "" ] && echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
+
+if [[ "${repo}" == "releases" ]] ; then
+    URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
+  else if [[ "${MP_VERSION}" != "latest" ]] ; then
+    l_repo="releases"
+    l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
+    [[ "${l_MP_VER}" == "" ]] && \
+	l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}" | grep -v "\-M" | tail -1)
+    [[ "${l_MP_VER}" != "" ]] && URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER}${classifier}.${type}"
   fi
-  if [ "${MP_VER}" != "" ] ; then
-	  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/maven-metadata.xml"))
-	  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/maven-metadata.xml"))
-	  URL="${base}/${repo}/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
+fi
+
+if [[ "${URL}" == "" ]] ; then
+  l_repo="${repo:-snapshots}"
+  if [[ "${MP_VERSION}" == "latest" ]] && [[ "${MP_VER}" == "" ]] ; then
+	  echo "latest version have to be listed in the map_midpoint-docker.csv !" >&2
+	  echo "maven-metadata.xml pointing to the last updated artefact (e.g. build of support branch) and not the latest version." >&2
+	  exit 1
+#	  MP_VER=$(xmllint --xpath "string(//latest)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
+  else
+	  if [[ "${MP_VER}" != "" ]] ; then
+		  l_MP_VER="${MP_VER}"
+	  else
+		  l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
+	  # fall back to provided value... If nothing found we can try directly provided version - in the worst case the URL will not be build up...
+	  [[ "${l_MP_VER}" == "" ]] && l_MP_VER=${MP_VERSION}
+  	  fi
+  fi
+  if [ "${l_MP_VER}" != "" ] ; then
+	  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
+	  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
+	  URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
   fi
 fi
 
@@ -47,6 +66,8 @@ if [[ "${URL}" == "" ]] ; then
   echo "Unknown tag"
   exit 1
 fi
+
+echo "${URL}" >$DIR/${fileName}.url
 
 echo "Downloading midPoint $MP_VERSION (${fileName}) from $URL"
 echo "--------------------------------------------------------------------"
