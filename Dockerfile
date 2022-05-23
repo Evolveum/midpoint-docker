@@ -1,6 +1,7 @@
 ARG MP_VERSION=latest
 ARG MP_DIR=/opt/midpoint
 ARG MP_DIST_FILE=midpoint-dist.tar.gz
+ARG MP_DIST_INFO=N/A
 ARG SKIP_DOWNLOAD=0
 ARG maintainer=evolveum
 ARG imagename=midpoint
@@ -51,6 +52,7 @@ FROM ${base_image}:${base_image_tag}
 
 ARG MP_DIR
 ARG MP_VERSION
+ARG MP_DIST_INFO
 ARG base_image
 ARG base_image_tag
 ARG maintainer
@@ -61,6 +63,7 @@ LABEL ImageType="base"
 LABEL ImageName="${imagename}"
 LABEL ImageOS="${base_image}:${base_image_tag}"
 LABEL Version="${MP_VERSION}"
+LABEL AppBuildID="${MP_DIST_INFO}"
 LABEL org.opencontainers.image.authors="info@evolveum.com"
 
 ENV JAVA_HOME=${java_home} \

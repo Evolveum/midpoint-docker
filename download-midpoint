@@ -30,12 +30,18 @@ repo=$(grep "^${MP_VERSION}," map_midpoint-docker.csv | cut -d "," -f 3)
 
 if [[ "${repo}" == "releases" ]] ; then
     URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
+
+    echo "Nexus: ${l_MP_VER} (release)" >$DIR/${fileName}.info
   else if [[ "${MP_VERSION}" != "latest" ]] ; then
     l_repo="releases"
     l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
     [[ "${l_MP_VER}" == "" ]] && \
 	l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}" | grep -v "\-M" | tail -1)
-    [[ "${l_MP_VER}" != "" ]] && URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER}${classifier}.${type}"
+    if [[ "${l_MP_VER}" != "" ]] ; then
+      URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER}${classifier}.${type}"
+
+      echo "Nexus: ${l_MP_VER} (release)" >$DIR/${fileName}.info
+    fi
   fi
 fi
 
@@ -59,6 +65,8 @@ if [[ "${URL}" == "" ]] ; then
 	  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
 	  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
 	  URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
+
+	  echo "Nexus: ${l_MP_VER} (${timestamp} / ${buildnumber})" >$DIR/${fileName}.info
   fi
 fi
 
@@ -66,8 +74,6 @@ if [[ "${URL}" == "" ]] ; then
   echo "Unknown tag"
   exit 1
 fi
-
-echo "${URL}" >$DIR/${fileName}.url
 
 echo "Downloading midPoint $MP_VERSION (${fileName}) from $URL"
 echo "--------------------------------------------------------------------"
