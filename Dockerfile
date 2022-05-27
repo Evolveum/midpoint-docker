@@ -86,7 +86,7 @@ RUN if [ "${base_image}" = "alpine" ]; \
   then apk --update add --no-cache openjdk17-jre-headless curl libxml2-utils tzdata bash ; \
   else sed 's/main$/main universe/' -i /etc/apt/sources.list && \
        apt-get update -y && \
-       apt-get install -y openjdk-17-jre-headless tzdata && \
+       apt-get install -y openjdk-17-jre-headless tzdata curl && \
        apt-get clean && \
        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* ; \
   fi
