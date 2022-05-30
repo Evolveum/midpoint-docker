@@ -56,7 +56,10 @@ docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${docker
 	--build-arg base_image_tag="${base_image_tag}" \
 	--build-arg java_home="${java_home_arg}" \
 	. || exit 1
-if [ ${SKIP_DOWNLOAD} -eq 0 ]; then rm "midpoint-dist-${tag}.tar.gz"; fi
+if [ ${SKIP_DOWNLOAD} -eq 0 ]; then
+	[ -e "midpoint-dist-${tag}.tar.gz" ] && rm "midpoint-dist-${tag}.tar.gz"
+	[ -e "midpoint-dist-${tag}.tar.gz.info" ] && rm "midpoint-dist-${tag}.tar.gz.info"
+fi
 docker image prune -f
 echo "---------------------------------------------------------------------------------------"
 echo "The midPoint containers were successfully built. To start them, execute the following:"
