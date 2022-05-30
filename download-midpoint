@@ -31,7 +31,7 @@ repo=$(grep "^${MP_VERSION}," map_midpoint-docker.csv | cut -d "," -f 3)
 if [[ "${repo}" == "releases" ]] ; then
     URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
 
-    echo "Nexus: ${l_MP_VER} (release)" >$DIR/${fileName}.info
+    echo "Nexus: ${MP_VER} (release)" >$DIR/${fileName}.info
   else if [[ "${MP_VERSION}" != "latest" ]] ; then
     l_repo="releases"
     l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
