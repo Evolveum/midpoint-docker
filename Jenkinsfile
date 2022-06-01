@@ -81,7 +81,7 @@ fi
             steps {
                 script {
                     try {
-                        sh 'OUT=$(./build.sh -r); rc=$?; echo \"$OUT\" | tee -a debug >/dev/null; test $rc -eq 0'
+                        sh 'OUT=$(./build.sh -r); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh ' ./build.sh -r 2>&1 | tee -a debug ; test ${PIPESTATUS[0]} -eq 0 '
                     } catch (error) {
                         def error_details = readFile('./debug')
@@ -97,11 +97,11 @@ fi
                 script {
                     try {
                         sh 'echo Docker containers before root tests ; docker ps -a'		// temporary
-                        sh 'OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug >/dev/null; test $rc -eq 0'
+                        sh 'OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(bats tests ) 2>&1 | tee debug ; test ${PIPESTATUS[0]} -eq 0'
 
                         sh 'echo Docker containers before compositions tests ; docker ps -a'		// temporary
-                        sh 'cd demo/postgresql; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug >/dev/null; test $rc -eq 0'
+                        sh 'cd demo/postgresql; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
 
                         //sh 'cd demo/clustering; OUT=$(bats tests); rc=$?; echo \"$OUT\" | tee -a debug; test $rc -eq 0'
                         //sh '(cd demo/postgresql ; bats tests ) 2>&1 | tee -a debug ; test ${PIPESTATUS[0]} -eq 0'
