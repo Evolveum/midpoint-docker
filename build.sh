@@ -44,8 +44,11 @@ fi
 dist_info="N/A"
 dist_info="$([ -e midpoint-dist-${tag}.tar.gz.info ] && cat midpoint-dist-${tag}.tar.gz.info)"
 
-ls -la midpoint-dist-${tag}.*
+echo " - - - - debug information - - - -"
+pwd
+ls .
 echo "${dist_info}"
+echo " - - - - - - - - - - - - - - - - -"
 
 if [ ${SKIP_DOWNLOAD} -eq 0 -o ! -e midpoint-dist-${tag}.tar.gz ]; then ./download-midpoint "${tag}" "midpoint-dist-${tag}.tar.gz" || exit 1; fi
 docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${docker_image_tag:-${tag}-${base_image}} \
