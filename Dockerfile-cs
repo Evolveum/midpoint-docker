@@ -1,7 +1,4 @@
 ARG MP_CS_DIR=/opt/connid-connector-server
-ARG MP_CS_DIST_FILE=midpoint-cs.zip
-ARG MP_CS_DIST_INFO=N/A
-ARG SKIP_DOWNLOAD=0
 ARG maintainer=evolveum
 ARG imagename=midpoint-connector-server
 ARG CS_version=1.5.0.18
@@ -24,8 +21,6 @@ FROM ${base_image}:${base_image_tag}
 
 ARG base_image
 ARG MP_CS_DIR
-ARG MP_CS_DIST_FILE
-ARG SKIP_DOWNLOAD
 ARG CS_version
 ARG CSV_version
 
@@ -45,9 +40,7 @@ COPY ./container_files/connectorserver-container ${MP_CS_DIR}/bin/
 FROM ${base_image}:${base_image_tag}
 
 ARG MP_CS_DIR
-ARG MP_CS_DIST_INFO
 ARG base_image
-ARG base_image_tag
 ARG maintainer
 ARG imagename
 ARG java_home
@@ -61,8 +54,6 @@ LABEL AppBuildID="${MP_CS_DIST_INFO}"
 LABEL org.opencontainers.image.authors="info@evolveum.com"
 
 ENV JAVA_HOME=${java_home} \
- MP_MEM_MAX=2048m \
- MP_MEM_INIT=1024m \
  TZ=UTC \
  MP_CS_DIR=${MP_CS_DIR}
 
