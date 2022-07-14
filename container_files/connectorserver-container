@@ -1,0 +1,94 @@
+#!/bin/bash
+cd ${MP_CS_DIR}
+
+#############################################################################
+# Set environment variable MP_CS_KEY to change shared key for communication.
+#
+# This key is used in midPoint's object configuration related to Connector
+# server.
+#############################################################################
+if [ "${MP_CS_KEY:-}" != "" ]
+then
+	echo "Changing key to : ${MP_CS_KEY}"
+        bin/ConnectorServer.sh -setKey -key ${MP_CS_KEY} -properties conf/connectorserver.properties
+	echo
+fi
+
+
+#############################################################################
+# change logger Class ...
+#
+# Optionaly the possibility to change setting for the logger by the env var
+#
+# e.g. MP_CS_LOG="property-SERVER_LEVEL-INFO-TRACE:level-INFO-TRACE"
+#############################################################################
+echo "setting LOG class to SLF4JLog (the setting is in lib/logback.xml ..."
+sed -i "s/^connectorserver.loggerClass=.*/connectorserver.loggerClass=org.identityconnectors.common.logging.slf4j.SLF4JLog/" conf/connectorserver.properties
+
+if [ "${MP_CS_LOG:-}" != "" ]
+then
+	echo "${MP_CS_LOG}" | sed "s/:/\n/g" | while read parameter
+	do
+		if [ "${parameter:0:9}" == "property-" ]
+		then
+			name="$(echo "${parameter}" | cut -d - -f 2)"
+			o_value="$(echo "${parameter}" | cut -d - -f 3)"
+			value="$(echo "${parameter}" | cut -d - -f 4)"
+			echo "Change ${name} value : ${o_value} => ${value} ..."
+			sed -i "s/property name=\"${name}\" value=\"${o_value}\"/property name=\"${name}\" value=\"${value}\"/" lib/logback.xml
+		fi
+		if [ "${parameter:0:6}" == "level-" ]
+		then
+			o_value="$(echo "${parameter}" | cut -d - -f 2)"
+			value="$(echo "${parameter}" | cut -d - -f 3)"
+			echo "Change LOG LEVEL ${o_value} => ${value} ..."
+			sed -i "s/level=\"${o_value}\"/level=\"${value}\"/" lib/logback.xml
+		fi
+	done
+fi
+
+#############################################################################
+# MP_CS_CERT_file is variable pointing to pkcs12 cert file (e.g. volume mounted)
+#
+# There should be set MP_CS_CERT_PW variable with the password for pkcs12 file.
+#
+# The setting is updated to use SSL
+#############################################################################
+if [ "${MP_CS_CERT_file:-}" != "" -a "${MP_CS_CERT_PW:-}" != "" ]
+then
+	echo "Processing the file with certificate : ${MP_CS_CERT_file}"
+	echo
+	if [ "${MP_CS_CERT_PW:-}" != "" ]
+	then
+		echo " . . . import keystore to JKS format"
+		${JAVA_HOME}/bin/keytool -importkeystore -srckeystore "${MP_CS_CERT_file}" -srcstoretype pkcs12 -destkeystore ${MP_CS_DIR}/conf/keystore.jks -deststoretype JKS -deststorepass changeit -srcstorepass "${MP_CS_CERT_PW}" -noprompt
+		echo " . . . getting alias for the certificate"
+		alias="$(${JAVA_HOME}/bin/keytool -list -keystore ${MP_CS_DIR}/conf/keystore.jks -v -storepass changeit 2>/dev/null| grep "^Alias name:" | sed "s/[^:]*: \([^[:space:]]*\).*/\1/")"
+		echo " . . . setting the key password for cert with alias \"${alias}\" to be the same as keystore password"
+		${JAVA_HOME}/bin/keytool -keypasswd -keystore ${MP_CS_DIR}/conf/keystore.jks -storepass changeit -new changeit -keypass "${MP_CS_CERT_PW}" -alias ${alias}
+		echo
+	else
+		exit 1
+	fi
+
+	echo "Updating the configuration..."
+	echo " . . . enabling the SSL in the configuration"
+	sed -i "s/^connectorserver.usessl=false/connectorserver.usessl=true/" ${MP_CS_DIR}/conf/connectorserver.properties
+	echo " . . . adding necessaty parameters related to the keystore"
+	[ $(grep -c "Djavax.net.ssl.keyStore=${MP_CS_DIR}/conf/keystore.jks" bin/ConnectorServer.sh) -eq 0 ] && \
+		sed -i "s|org.identityconnectors.framework|-Djavax.net.ssl.keyStore=${MP_CS_DIR}/conf/keystore.jks org.identityconnectors.framework|" bin/ConnectorServer.sh 
+	[ $(grep -c "Djavax.net.ssl.keyStorePassword=changeit" bin/ConnectorServer.sh) -eq 0 ] && \
+		sed -i "s|org.identityconnectors.framework|-Djavax.net.ssl.keyStorePassword=changeit org.identityconnectors.framework|" bin/ConnectorServer.sh
+	[ $(grep -c "Djavax.net.ssl.keyStoreType=JKS" bin/ConnectorServer.sh) -eq 0 ] && \
+		sed -i "s|org.identityconnectors.framework|-Djavax.net.ssl.keyStoreType=JKS org.identityconnectors.framework|" bin/ConnectorServer.sh 
+	echo
+
+fi
+
+echo "Starting Connector Server ..."
+echo
+echo "$(grep "^NAME=" /etc/os-release | cut -d = -f 2 | cut -d \" -f 2 ) $(grep "^VERSION_ID=" /etc/os-release | cut -d = -f 2 | cut -d \" -f 2)"
+${JAVA_HOME}/bin/java -version
+echo
+
+bin/ConnectorServer.sh -run -properties conf/connectorserver.properties

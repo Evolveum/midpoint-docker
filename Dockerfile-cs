@@ -1,0 +1,84 @@
+ARG MP_CS_DIR=/opt/connid-connector-server
+ARG MP_CS_DIST_FILE=midpoint-cs.zip
+ARG MP_CS_DIST_INFO=N/A
+ARG SKIP_DOWNLOAD=0
+ARG maintainer=evolveum
+ARG imagename=midpoint-connector-server
+ARG CS_version=1.5.0.18
+ARG CSV_version=2.4
+ARG java_version=17
+
+### values for Ubuntu based image ###
+# ARG base_image=ubuntu
+# ARG base_image_tag=20.04
+# ARG java_home=/usr/lib/jvm/java-17-openjdk-amd64
+####################################
+
+### values for Alpine based image ###
+ARG base_image=alpine
+ARG base_image_tag=latest
+ARG java_home=/usr/lib/jvm/default-jvm
+#####################################
+
+FROM ${base_image}:${base_image_tag}
+
+ARG base_image
+ARG MP_CS_DIR
+ARG MP_CS_DIST_FILE
+ARG SKIP_DOWNLOAD
+ARG CS_version
+ARG CSV_version
+
+RUN if [ "${base_image}" = "alpine" ]; \
+  then apk --update add --no-cache libxml2-utils curl bash unzip ; \
+  else apt-get update -y && apt-get install -y curl libxml2-utils ; \
+  fi
+
+RUN cd /opt && \
+  curl -O https://nexus.evolveum.com/nexus/repository/releases/net/tirasa/connid/connector-server-zip/${CS_version}/connector-server-zip-${CS_version}.zip && \
+  unzip connector-server-zip-${CS_version}.zip && \
+  cd ${MP_CS_DIR}/bundles/ && \
+  curl -O https://nexus.evolveum.com/nexus/repository/releases/com/evolveum/polygon/connector-csv/${CSV_version}/connector-csv-${CSV_version}.jar
+
+COPY ./container_files/connectorserver-container ${MP_CS_DIR}/bin/
+
+FROM ${base_image}:${base_image_tag}
+
+ARG MP_CS_DIR
+ARG MP_CS_DIST_INFO
+ARG base_image
+ARG base_image_tag
+ARG maintainer
+ARG imagename
+ARG java_home
+ARG java_version
+
+LABEL Vendor="${maintainer}"
+LABEL ImageType="base"
+LABEL ImageName="${imagename}"
+LABEL ImageOS="${base_image}:${base_image_tag}"
+LABEL AppBuildID="${MP_CS_DIST_INFO}"
+LABEL org.opencontainers.image.authors="info@evolveum.com"
+
+ENV JAVA_HOME=${java_home} \
+ MP_MEM_MAX=2048m \
+ MP_MEM_INIT=1024m \
+ TZ=UTC \
+ MP_CS_DIR=${MP_CS_DIR}
+
+RUN if [ "${base_image}" = "alpine" ]; \
+  then apk --update add --no-cache openjdk${java_version}-jre-headless curl libxml2-utils tzdata bash ; \
+  else sed 's/main$/main universe/' -i /etc/apt/sources.list && \
+       apt-get update -y && \
+       apt-get install -y openjdk-${java_version}-jre-headless tzdata curl && \
+       apt-get clean && \
+       rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* ; \
+  fi
+
+COPY --from=0 ${MP_CS_DIR} ${MP_CS_DIR}/
+
+EXPOSE 8759
+
+CMD [ "/opt/connid-connector-server/bin/connectorserver-container" ]
+
+VOLUME ${MP_CS_DIR}/bundles
