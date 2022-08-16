@@ -31,7 +31,7 @@ RUN if [ "${base_image}" = "alpine" ]; \
   else apt-get update -y && apt-get install -y curl libxml2-utils ; \
   fi
 
-COPY download-midpoint common.bash ${MP_DIST_FILE}* ${MP_DIR}/
+COPY download-midpoint map_midpoint-docker.csv common.bash ${MP_DIST_FILE}* ${MP_DIR}/
 
 RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
   then chmod 755 ${MP_DIR}/download-midpoint && \
