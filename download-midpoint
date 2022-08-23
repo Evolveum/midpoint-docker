@@ -23,8 +23,8 @@ l_MP_VER=""
 URL=""
 
 # check "known" versions from map_midpoint-docker.csv file
-MP_VER=$(grep "^${MP_VERSION}," map_midpoint-docker.csv | cut -d "," -f 2)
-repo=$(grep "^${MP_VERSION}," map_midpoint-docker.csv | cut -d "," -f 3)
+MP_VER=$(grep "^${MP_VERSION}," $DIR/map_midpoint-docker.csv | cut -d "," -f 2)
+repo=$(grep "^${MP_VERSION}," $DIR/map_midpoint-docker.csv | cut -d "," -f 3)
 
 [ "${MP_VER}" != "" ] && echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
 

@@ -38,7 +38,7 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
        ${MP_DIR}/download-midpoint ${MP_VERSION} ${MP_DIST_FILE} ; \
   fi ; \
   tar -xzC ${MP_DIR} -f ${MP_DIR}/${MP_DIST_FILE} --strip-components=1 ; \
-  rm -f ${MP_DIR}/${MP_DIST_FILE}* ${MP_DIR}/download-midpoint ${MP_DIR}/common.bash
+  rm -f ${MP_DIR}/${MP_DIST_FILE}* ${MP_DIR}/download-midpoint ${MP_DIR}/map_midpoint-docker.csv ${MP_DIR}/common.bash
 
 ##### 2022/05/02 - "reaction" to adding jar package to dist archive ######
 # Once both jar and war is present the only jar is needed. During transition perion the
