@@ -26,7 +26,17 @@ URL=""
 MP_VER=$(grep "^${MP_VERSION}," $DIR/map_midpoint-docker.csv | cut -d "," -f 2)
 repo=$(grep "^${MP_VERSION}," $DIR/map_midpoint-docker.csv | cut -d "," -f 3)
 
-[ "${MP_VER}" != "" ] && echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
+if [ "${MP_VER}" != "" ]
+then
+	echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
+else
+	if [ $(curl -s https://nexus.evolveum.com/nexus/repository/releases/com/evolveum/midpoint/dist/maven-metadata.xml | grep "<version>" | sed "s|[^>]*>\([^<]*\)<.*|\1|" | grep "^${MP_VERSION}\$" | wc -l) -eq 1 ]
+	then
+		MP_VER="${MP_VERSION}"
+		repo="releases"
+		echo "Found in the list of releases on nexus - ${MP_VER} @ ${repo}"
+	fi
+fi
 
 if [[ "${repo}" == "releases" ]] ; then
     URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
