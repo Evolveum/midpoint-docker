@@ -5,6 +5,7 @@ ARG MP_DIST_INFO=N/A
 ARG SKIP_DOWNLOAD=0
 ARG maintainer=evolveum
 ARG imagename=midpoint
+ARG JAVA_VERSION=17
 
 ### values for Ubuntu based image ###
 ARG base_image=ubuntu
@@ -57,6 +58,7 @@ ARG base_image
 ARG base_image_tag
 ARG maintainer
 ARG imagename
+ARG JAVA_VERSION
 
 LABEL Vendor="${maintainer}"
 LABEL ImageType="base"
@@ -83,10 +85,10 @@ ENV JAVA_HOME=${java_home} \
 COPY container_files/usr-local-bin/* /usr/local/bin/
 
 RUN if [ "${base_image}" = "alpine" ]; \
-  then apk --update add --no-cache openjdk17-jre-headless curl libxml2-utils tzdata bash ; \
+  then apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash ; \
   else sed 's/main$/main universe/' -i /etc/apt/sources.list && \
        apt-get update -y && \
-       apt-get install -y openjdk-17-jre-headless tzdata curl && \
+       apt-get install -y openjdk-${JAVA_VERSION}-jre-headless tzdata curl && \
        apt-get clean && \
        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* ; \
   fi
