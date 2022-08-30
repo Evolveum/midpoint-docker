@@ -1,5 +1,5 @@
 docker tag,nexus version,nexus repository,end of support (mm/dd/yyyy)
-4.0,4.4,releases,9/8/2022
+4.0,4.0,releases,9/8/2022
 4.0.1,4.0.1,releases,9/8/2022
 4.0.2,4.0.2,releases,9/8/2022
 4.0.3,4.0.3,releases,9/8/2022
