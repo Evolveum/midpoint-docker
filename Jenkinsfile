@@ -28,7 +28,8 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
                         ]) {
                     try {
                         sh """#!/bin/bash
-timestamp="\$(date +%s)-${JOB_NAME}-${BUILD_NUMBER}"
+#timestamp="\$(date +%s)-${JOB_NAME}-${BUILD_NUMBER}"
+timestamp="${JOB_NAME}-${BUILD_NUMBER}"
 echo \${timestamp} >timestamp
 mkdir logs-\${timestamp}
 cat <<EOF | kubectl apply -f -
