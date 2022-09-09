@@ -63,9 +63,9 @@ if [[ "${URL}" == "" ]] ; then
 			if [ "${MP_VERSION: -8}" == "-support" ]
 			then
 				temp_version="${MP_VERSION:0:$(( ${#MP_VERSION} - 8 ))}"
-				if [ $( echo "${snapshotsList}" | grep "^${temp_version}.*SNAPSHOT\$" | wc -l ) -eq 1 ]
+				if [ $( echo "${snapshotsList}" | grep "^${temp_version}.*SNAPSHOT\$" | wc -l ) -gt 0 ]
 				then
-					l_MP_VER="$( echo "${snapshotsList}" | grep "^${temp_version}.*SNAPSHOT\$" )"
+					l_MP_VER="$( echo "${snapshotsList}" | grep "^${temp_version}.*SNAPSHOT\$" | tail -1 )"
 					echo "Found related snapshot on nexus - ${l_MP_VER} @ ${l_repo}"
 				fi
 			else
