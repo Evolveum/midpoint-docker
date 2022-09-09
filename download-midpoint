@@ -14,7 +14,9 @@ groupId="com.evolveum.midpoint"
 artifactId="dist"
 classifier="-dist"
 type="tar.gz"
-base="https://nexus.evolveum.com/nexus/repository"
+baseURL="https://nexus.evolveum.com/nexus"
+base="${baseURL}/repository"
+restBrowseBase="${baseURL}/service/rest/repository/browse"
 groupIdUrl="${groupId//.//}"
 filename="${artifactId}-${MP_VERSION}${classifier}.${type}"
 
@@ -30,7 +32,7 @@ if [ "${MP_VER}" != "" ]
 then
 	echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
 else
-	if [ $(curl -s https://nexus.evolveum.com/nexus/repository/releases/com/evolveum/midpoint/dist/maven-metadata.xml | grep "<version>" | sed "s|[^>]*>\([^<]*\)<.*|\1|" | grep "^${MP_VERSION}\$" | wc -l) -eq 1 ]
+	if [ $( curl -s ${restBrowseBase}/releases/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
 	then
 		MP_VER="${MP_VERSION}"
 		repo="releases"
@@ -42,33 +44,35 @@ if [[ "${repo}" == "releases" ]] ; then
     URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
 
     echo "Nexus: ${MP_VER} (release)" >$DIR/${fileName}.info
-  else if [[ "${MP_VERSION}" != "latest" ]] ; then
-    l_repo="releases"
-    l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
-    [[ "${l_MP_VER}" == "" ]] && \
-	l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}" | grep -v "\-M" | tail -1)
-    if [[ "${l_MP_VER}" != "" ]] ; then
-      URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER}${classifier}.${type}"
-
-      echo "Nexus: ${l_MP_VER} (release)" >$DIR/${fileName}.info
-    fi
-  fi
 fi
 
 if [[ "${URL}" == "" ]] ; then
   l_repo="${repo:-snapshots}"
+  snapshotsList="$( curl -s ${restBrowseBase}/${l_repo}/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 )"
   if [[ "${MP_VERSION}" == "latest" ]] && [[ "${MP_VER}" == "" ]] ; then
-	  echo "latest version have to be listed in the map_midpoint-docker.csv !" >&2
-	  echo "maven-metadata.xml pointing to the last updated artefact (e.g. build of support branch) and not the latest version." >&2
-	  exit 1
-#	  MP_VER=$(xmllint --xpath "string(//latest)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml"))
+	  l_MP_VER="$( echo "${snapshotsList}" | tail -1 )"
   else
 	  if [[ "${MP_VER}" != "" ]] ; then
 		  l_MP_VER="${MP_VER}"
 	  else
-		  l_MP_VER=$(curl -k -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/.*<version>\([^<]*\)<\/version>/\1/" | grep "^${MP_VERSION}$" | tail -1)
-	  # fall back to provided value... If nothing found we can try directly provided version - in the worst case the URL will not be build up...
-	  [[ "${l_MP_VER}" == "" ]] && l_MP_VER=${MP_VERSION}
+		  if [ $( echo "${snapshotsList}" | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
+		  then
+			l_MP_VER="${MP_VERSION}"
+			echo "Found in the list of snapshots on nexus - ${l_MP_VER} @ ${l_repo}"
+		  else
+			if [ "${MP_VERSION: -8}" == "-support" ]
+			then
+				temp_version="${MP_VERSION:0:$(( ${#MP_VERSION} - 8 ))}"
+				if [ $( echo "${snapshotsList}" | grep "^${temp_version}.*SNAPSHOT\$" | wc -l ) -eq 1 ]
+				then
+					l_MP_VER="$( echo "${snapshotsList}" | grep "^${temp_version}.*SNAPSHOT\$" )"
+					echo "Found related snapshot on nexus - ${l_MP_VER} @ ${l_repo}"
+				fi
+			else
+				echo "The artifact cannot be found..."
+				exit 1
+			fi
+		  fi
   	  fi
   fi
   if [ "${l_MP_VER}" != "" ] ; then
