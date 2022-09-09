@@ -14,7 +14,6 @@ then
 	echo
 fi
 
-
 #############################################################################
 # change logger Class ...
 #
@@ -83,6 +82,34 @@ then
 		sed -i "s|org.identityconnectors.framework|-Djavax.net.ssl.keyStoreType=JKS org.identityconnectors.framework|" bin/ConnectorServer.sh 
 	echo
 
+fi
+
+#############################################################################
+# Generate the object to import into the midPoint (ConnectorHost).
+# e.g. MP_CS_GEN=1
+#############################################################################
+if [ "${MP_CS_GEN:-}" != "" ]
+then
+  cs_port="$(grep "^connectorserver.port" conf/connectorserver.properties | cut -d "=" -f 2)"
+  cs_ssl="$(grep "^connectorserver.usessl" conf/connectorserver.properties | cut -d "=" -f 2)"
+  cs_addr="$(ip route get 0.0.0.1 | sed "s/.*src \([^[:space:]]\)/\1/" | tr -d [[:space:]])"
+
+  echo "ConnectorHost object configuration..."
+  echo
+  cat <<EOF
+<connectorHost
+  xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+  xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3">
+	<name>ICF Connector server on ${cs_addr}:${cs_port}</name>
+	<hostname>${cs_addr}</hostname>
+	<port>${cs_port}</port>
+	<protectConnection>${cs_ssl:-false}</protectConnection>
+	<sharedSecret>
+		<t:clearValue>${MP_CS_KEY:-changeit}</t:clearValue>
+	</sharedSecret>
+</connectorHost>
+EOF
+  echo
 fi
 
 echo "Starting Connector Server ..."
