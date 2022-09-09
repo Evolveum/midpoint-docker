@@ -1200,7 +1200,7 @@ EOF
         echo "Pushing Dockerfile..."
         ret=1
         iteration=0
-        while [ \${ret} -eq 1 -a \${iteration} -lt ${waitCycle} ] 
+        while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
         do
             sleep 5
     	    cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
