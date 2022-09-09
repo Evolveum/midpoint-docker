@@ -263,6 +263,9 @@ kubectl delete -n jenkins pod/kaniko-\${timestamp}
                     sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
 
+#In each cycle there is sleep time set to 5 seconds
+waitCycle=120
+
 mkdir logs-\${timestamp}/h2
 
 function createPVC {
@@ -323,7 +326,7 @@ function checkApp {
     iteration=0
     logItemFound=0
 
-    while [ \${iteration} -le 60 -a \${logItemFound} -eq 0 ]
+    while [ \${iteration} -le \${waitCycle} -a \${logItemFound} -eq 0 ]
     do
         sleep 5
         kubectl logs -n \${1} \${2} > \${3}/pod-mp.log 2>\${3}/pod-mp.errlog
@@ -383,7 +386,7 @@ function checkApp {
 function healthCheck {
     iteration=0
     status="\$(curl -s -f http://\${1}:\${2}/midpoint/actuator/health | tr -d '[:space:]' | sed "s|{\\"status\\":\\"\\([^\\"]*\\)\\"}|\\1|")"
-    while [ \${iteration} -lt 30 -a "\${status}" != "UP" ]
+    while [ \${iteration} -lt \${waitCycle} -a "\${status}" != "UP" ]
     do
         sleep 5
         status="\$(curl -s -f http://\${1}:\${2}/midpoint/actuator/health | tr -d '[:space:]' | sed "s|{\\"status\\":\\"\\([^\\"]*\\)\\"}|\\1|")"
@@ -601,6 +604,9 @@ fi
 
 timestamp="\$(cat timestamp)"
 
+#In each cycle there is sleep time set to 5 seconds
+waitCycle=120
+
 echo "1" > logs-\${timestamp}/test-result-native
 error=0
 
@@ -742,7 +748,7 @@ function checkApp {
     iteration=0
     logItemFound=0
 
-    while [ \${iteration} -le 60 -a \${logItemFound} -eq 0 ]
+    while [ \${iteration} -le \${waitCycle} -a \${logItemFound} -eq 0 ]
     do
         sleep 5
         kubectl logs -n \${1} \${2} > \${3}/pod-mp.log 2>\${3}/pod-mp.errlog
@@ -804,7 +810,7 @@ function checkDB {
         logItemFound=0
 
         echo -n "Processed : 0 lines of log..."
-        while [ \${iteration} -le 60 -a \${logItemFound} -eq 0 ]
+        while [ \${iteration} -le \${waitCycle} -a \${logItemFound} -eq 0 ]
         do
                 sleep 5
                 kubectl logs -n \${1} \${2} > \${3}/pod-db.log 2>\${3}/pod-db.errlog
@@ -838,7 +844,7 @@ function checkDB {
 function healthCheck {
     iteration=0
     status="\$(curl -s -f http://\${1}:\${2}/midpoint/actuator/health | tr -d '[:space:]' | sed "s|{\\"status\\":\\"\\([^\\"]*\\)\\"}|\\1|")"
-    while [ \${iteration} -lt 30 -a "\${status}" != "UP" ]
+    while [ \${iteration} -lt \${waitCycle} -a "\${status}" != "UP" ]
     do
         sleep 5
         status="\$(curl -s -f http://\${1}:\${2}/midpoint/actuator/health | tr -d '[:space:]' | sed "s|{\\"status\\":\\"\\([^\\"]*\\)\\"}|\\1|")"
@@ -1110,6 +1116,10 @@ exit 0
                     withCredentials([usernamePassword(credentialsId: 'DockerHub', passwordVariable: 'dockerPw', usernameVariable: 'dockerUser')]) {
                         sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
+
+#In each cycle there is sleep time set to 5 seconds
+waitCycle=120
+
 curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
 curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/midpoint/tags/list
 echo
@@ -1190,9 +1200,9 @@ EOF
         echo "Pushing Dockerfile..."
         ret=1
         iteration=0
-        while [ \${ret} -eq 1 -a \${iteration} -lt 60 ] 
+        while [ \${ret} -eq 1 -a \${iteration} -lt ${waitCycle} ] 
         do
-            sleep 1
+            sleep 5
     	    cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
 FROM registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}
 EOF
@@ -1204,9 +1214,9 @@ EOF
         echo "Pushing docker creds..."
         ret=1
         iteration=0
-        while [ \${ret} -eq 1 -a \${iteration} -lt 60 ] 
+        while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
         do
-            sleep 1
+            sleep 5
 	        cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10124
 {
 	"auths": {
