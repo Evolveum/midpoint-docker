@@ -43,7 +43,7 @@ fi
 if [[ "${repo}" == "releases" ]] ; then
     URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
 
-    echo "Nexus: ${MP_VER} (release)" >$DIR/${fileName}.info
+    echo "Nexus: ${MP_VER} (releases / ${artifactId}-${MP_VER}${classifier}.${type} )" | tee $DIR/${fileName}.info
 fi
 
 if [[ "${URL}" == "" ]] ; then
@@ -80,7 +80,7 @@ if [[ "${URL}" == "" ]] ; then
 	  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
 	  URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
 
-	  echo "Nexus: ${l_MP_VER} (${timestamp} / ${buildnumber})" >$DIR/${fileName}.info
+	  echo "Nexus: ${l_MP_VER} (${l_repo} / ${artifactId}-${l_MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type} )" | tee $DIR/${fileName}.info
   fi
 fi
 

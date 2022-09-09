@@ -198,8 +198,8 @@ curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
                     try {
                         sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
-mkdir midpoint-docker
-curl -s -L https://github.com/Evolveum/midpoint-docker/tarball/master | tar -xzC /home/jenkins/agent/workspace/environment-docker-image-test/midpoint-docker --strip-components=1
+#mkdir midpoint-docker
+#curl -s -L https://github.com/Evolveum/midpoint-docker/tarball/master | tar -xzC ${WORKSPACE}/midpoint-docker --strip-components=1
 osID=\$(echo "${IMAGEOS}" | cut -d "-" -f 1)
 osVer=\$(echo "${IMAGEOS}" | cut -d "-" -f 2)
 case \${osID} in
@@ -207,7 +207,7 @@ case \${osID} in
         javaPath="/usr/lib/jvm/default-jvm"
         ;;
     *)
-        javaPath="/usr/lib/jvm/java-17-openjdk-amd64"
+        javaPath="/usr/lib/jvm/java-${JAVAVER}-openjdk-amd64"
         ;;
 esac
 cat <<EOF | kubectl apply -f -
@@ -1136,6 +1136,8 @@ if [ \${error} -ne 0 ]
 then
     echo "The image will not be pushed due to the previous error during the test..."
 else
+    distInfo="\$(grep "^Nexus:" logs-\${timestamp}/kaniko.log)"
+    appID="LABEL AppBuildID=\"\${distInfo:-N/A}\""
     osSuffix="-\$(echo "${IMAGEOS}" | cut -d "-" -f 1)"
     [ "\${osSuffix}" == "-ubuntu" ] && osSuffix=""
     autotag=""
@@ -1205,6 +1207,7 @@ EOF
             sleep 5
     	    cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
 FROM registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}
+\${appID}
 EOF
     	    ret=\$?
     	    iteration=\$(( \${iteration} + 1 ))
@@ -1239,7 +1242,7 @@ EOF
         done
         echo "Downloading the log..."
         kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko-init > logs-\${timestamp}/kaniko-push-\${pushTag}-init.log
-        kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko | tee logs-\${timestamp}/kaniko-push-\${pushTag}.log | grep "ush"
+        kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko | tee logs-\${timestamp}/kaniko-push-\${pushTag}.log | grep "Applying\\|ush"
         kubectl delete -n jenkins pod/kaniko-push-\${timestamp}
     done
 fi
