@@ -245,7 +245,7 @@ do
     echo "Log contain \$(kubectl logs -n jenkins kaniko-\${timestamp} | wc -l) lines..."
 done
 echo " - - - - partial log from the kaniko container - - - -"
-kubectl logs -n jenkins kaniko-\${timestamp} |tee logs-\${timestamp}/kaniko.log | grep -B 1 "^Nexus:\\|Applying\\|Downloading midPoint\\|Pushed"
+kubectl logs -n jenkins kaniko-\${timestamp} |tee logs-\${timestamp}/kaniko.log | grep -B 1 "Applying\\|Downloading midPoint\\|Pushed"
 echo " - - - - end of container's partial log - - - -"
 echo -e "\\tFull log is available to download in the job build's artifact..."
 kubectl delete -n jenkins pod/kaniko-\${timestamp}
