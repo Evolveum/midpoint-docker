@@ -245,7 +245,7 @@ do
     echo "Log contain \$(kubectl logs -n jenkins kaniko-\${timestamp} | wc -l) lines..."
 done
 echo " - - - - partial log from the kaniko container - - - -"
-kubectl logs -n jenkins kaniko-\${timestamp} |tee logs-\${timestamp}/kaniko.log | grep -B 1 "Applying\\|Downloading midPoint\\|Pushed"
+kubectl logs -n jenkins kaniko-\${timestamp} |tee logs-\${timestamp}/kaniko.log | grep -B 1 "^Nexus:\\|Applying\\|Downloading midPoint\\|Pushed"
 echo " - - - - end of container's partial log - - - -"
 echo -e "\\tFull log is available to download in the job build's artifact..."
 kubectl delete -n jenkins pod/kaniko-\${timestamp}
@@ -1137,7 +1137,6 @@ then
     echo "The image will not be pushed due to the previous error during the test..."
 else
     distInfo="\$(grep "^Nexus:" logs-\${timestamp}/kaniko.log)"
-    appID="LABEL AppBuildID=\"\${distInfo:-N/A}\""
     osSuffix="-\$(echo "${IMAGEOS}" | cut -d "-" -f 1)"
     [ "\${osSuffix}" == "-ubuntu" ] && osSuffix=""
     autotag=""
@@ -1207,7 +1206,7 @@ EOF
             sleep 5
     	    cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
 FROM registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}
-\${appID}
+LABEL AppBuildID="\${distInfo:-N/A}"
 EOF
     	    ret=\$?
     	    iteration=\$(( \${iteration} + 1 ))
