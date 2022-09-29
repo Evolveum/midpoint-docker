@@ -18,7 +18,6 @@ baseURL="https://nexus.evolveum.com/nexus"
 base="${baseURL}/repository"
 restBrowseBase="${baseURL}/service/rest/repository/browse"
 groupIdUrl="${groupId//.//}"
-filename="${artifactId}-${MP_VERSION}${classifier}.${type}"
 
 MP_VER=""
 l_MP_VER=""
@@ -40,13 +39,13 @@ else
 	fi
 fi
 
-if [[ "${repo}" == "releases" ]] ; then
+if [ "${repo}" == "releases" -a "${MP_VER}" != "" ] ; then
     URL="${base}/releases/${groupIdUrl}/${artifactId}/${MP_VER}/${artifactId}-${MP_VER}${classifier}.${type}"
 
     echo "Nexus: ${MP_VER} (releases / ${artifactId}-${MP_VER}${classifier}.${type} )" | tee $DIR/${fileName}.info
 fi
 
-if [[ "${URL}" == "" ]] ; then
+if [ "${URL}" == "" ] ; then
   l_repo="${repo:-snapshots}"
   snapshotsList="$( curl -s ${restBrowseBase}/${l_repo}/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 )"
   if [[ "${MP_VERSION}" == "latest" ]] && [[ "${MP_VER}" == "" ]] ; then
@@ -76,8 +75,9 @@ if [[ "${URL}" == "" ]] ; then
   	  fi
   fi
   if [ "${l_MP_VER}" != "" ] ; then
-	  timestamp=$(xmllint --xpath "string(//timestamp)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
-	  buildnumber=$(xmllint --xpath "string(//buildNumber)" <(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml"))
+	  metadata="$(curl -k -s "${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/maven-metadata.xml")"
+	  timestamp="$(echo "${metadata}" | grep "<timestamp>" | sed "s|[^>]*>\([^<]*\)<.*|\1|")"
+	  buildnumber="$(echo "${metadata}" | grep "<buildNumber>" | sed "s|[^>]*>\([^<]*\)<.*|\1|")"
 	  URL="${base}/${l_repo}/${groupIdUrl}/${artifactId}/${l_MP_VER}/${artifactId}-${l_MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
 
 	  echo "Nexus: ${l_MP_VER} (${l_repo} / ${artifactId}-${l_MP_VER%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type} )" | tee $DIR/${fileName}.info
