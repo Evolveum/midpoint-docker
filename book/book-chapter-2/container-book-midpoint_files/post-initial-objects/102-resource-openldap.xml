@@ -44,14 +44,14 @@
 
     <connectorConfiguration
         xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
-        xmlns:icfcldap="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-ldap/com.evolveum.polygon.connector.ldap.LdapConnector">
+        xmlns:icfcldap="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-ldap/com.evolveum.polygon.connector.ldap.ad.AdLdapConnector">
         <icfc:configurationProperties>
             <icfcldap:port>389</icfcldap:port>
-            <icfcldap:host>localhost</icfcldap:host>
-            <icfcldap:baseContext>dc=example,dc=com</icfcldap:baseContext>
-            <icfcldap:bindDn>cn=idm,ou=Administrators,dc=example,dc=com</icfcldap:bindDn>
+            <icfcldap:host>ad</icfcldap:host>
+            <icfcldap:baseContext>dc=sambaad,dc=local</icfcldap:baseContext>
+            <icfcldap:bindDn>CN=Administrator,CN=Users,dc=sambaad,dc=local</icfcldap:bindDn>
             <icfcldap:bindPassword>
-                <t:clearValue>secret</t:clearValue>
+                <t:clearValue>PASS0rd123</t:clearValue>
             </icfcldap:bindPassword>
             <icfcldap:pagingStrategy>auto</icfcldap:pagingStrategy>
             <icfcldap:passwordHashAlgorithm>SSHA</icfcldap:passwordHashAlgorithm>

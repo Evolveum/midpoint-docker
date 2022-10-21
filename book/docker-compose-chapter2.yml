@@ -32,25 +32,25 @@ services:
       - pg-crm_data:/var/lib/postgresql/data
       - ./book-chapter-common/container-book-postgres-crm_files:/docker-entrypoint-initdb.d/:ro
 
-  ldap:
-    image: osixia/openldap:stable
+  ad:
+    image: sonohara/samba4-ad-dc
     container_name: book-ldap-chapter-2
-    entrypoint: [ "/container/tool/run", "--copy-service" ]
-    ports:
-      - "10389:389"
-    environment:
-      - LDAP_DOMAIN=example.com
-      - LDAP_ADMIN_PASSWORD=secret
-      - LDAP_TLS=false
+    privileged: true
     networks:
       - net
-    volumes:
-      - ldap_conf:/etc/ldap/slapd.d
-      - ldap_data:/var/lib/ldap
-      - ./book-chapter-common/container-book-ldap_files:/container/service/slapd/assets/config/bootstrap/ldif/custom/:ro
+    ports:
+    - "389:389"
+    environment:
+    - DOCKER_DEBUG=1
+    - DNS_FORWARD=8.8.8.8
+    - DNS_DOMAIN=sambaad.local
+    - AD_PASSWORD=PASS0rd123
+    - AD_REALM=sambaad.local
+    - AD_DOMAIN=SAMBAAD
 
   midpoint:
-    image: evolveum/midpoint:${MP_VERSION:-4.2}-alpine
+    image: evolveum/midpoint:${MP_VERSION:-4.4}-alpine
+    # image: sakazuki/midpoint:arm64
     container_name: book-midpoint-chapter-2
     ports:
       - "8080:8080"
@@ -71,7 +71,6 @@ services:
       - midpoint_home:/opt/midpoint/var
       - ./book-chapter-2/container-book-midpoint_files:/opt/midpoint-dirs-docker-entrypoint/:ro
     depends_on:
-      - ldap
       - postgresql-crm
       - postgresql-midpoint
 
