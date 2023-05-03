@@ -1135,7 +1135,7 @@ echo "Overall error status is : \${error}"
 if [ "${ALTDOCTAG}" == "NO_PUSH" ]
 then
 	echo "There is request to skip the Image PUSH. Skipping..."
-	error=1
+	exit 0
 fi
 
 if [ \${error} -ne 0 ]
