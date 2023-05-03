@@ -1132,6 +1132,12 @@ done < <(cat logs-\${timestamp}/test-result*)
 echo \${error} > logs-\${timestamp}/test-result
 echo "Overall error status is : \${error}"
 
+if [ "${ALTDOCTAG}" == "NO_PUSH" ]
+then
+	echo "There is request to skip the Image PUSH. Skipping..."
+	error=1
+fi
+
 if [ \${error} -ne 0 ]
 then
     echo "The image will not be pushed due to the previous error during the test..."
