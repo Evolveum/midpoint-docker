@@ -28,7 +28,7 @@ ARG MP_DIST_FILE
 ARG SKIP_DOWNLOAD
 
 RUN if [ "${base_image}" = "alpine" ]; \
-  then apk --update add --no-cache libxml2-utils curl bash ; \
+  then apk --update add --no-cache libxml2-utils curl bash fontconfig ttf-dejavu ; \
   else apt-get update -y && apt-get install -y curl libxml2-utils ; \
   fi
 
