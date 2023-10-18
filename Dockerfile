@@ -9,7 +9,7 @@ ARG JAVA_VERSION=17
 
 ### values for Ubuntu based image ###
 ARG base_image=ubuntu
-ARG base_image_tag=20.04
+ARG base_image_tag=22.04
 ARG java_home=/usr/lib/jvm/java-17-openjdk-amd64
 ####################################
 
@@ -28,7 +28,7 @@ ARG MP_DIST_FILE
 ARG SKIP_DOWNLOAD
 
 RUN if [ "${base_image}" = "alpine" ]; \
-  then apk --update add --no-cache libxml2-utils curl bash fontconfig ttf-dejavu ; \
+  then apk --update add --no-cache libxml2-utils curl bash ; \
   else apt-get update -y && apt-get install -y curl libxml2-utils ; \
   fi
 
@@ -85,7 +85,7 @@ ENV JAVA_HOME=${java_home} \
 COPY container_files/usr-local-bin/* /usr/local/bin/
 
 RUN if [ "${base_image}" = "alpine" ]; \
-  then apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash ; \
+  then apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu ; \
   else sed 's/main$/main universe/' -i /etc/apt/sources.list && \
        apt-get update -y && \
        apt-get install -y openjdk-${JAVA_VERSION}-jre-headless tzdata curl && \
