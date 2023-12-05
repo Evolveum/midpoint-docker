@@ -34,13 +34,6 @@ while getopts "nhr?" opt; do
     esac
 done
 
-# the defaults for ubuntu
-java_home_arg="/usr/lib/jvm/java-17-openjdk-amd64"
-if [ "${base_image}" = "alpine" ]
-then
-	java_home_arg="/usr/lib/jvm/default-jvm"
-fi
-
 dist_info="N/A"
 dist_info="$([ -e midpoint-dist-${tag}.tar.gz.info ] && cat midpoint-dist-${tag}.tar.gz.info)"
 
@@ -60,7 +53,6 @@ docker build ${REFRESH} --network host --tag ${maintainer}/${imagename}:${docker
 	--build-arg MP_VERSION=${tag} \
 	--build-arg base_image="${base_image}" \
 	--build-arg base_image_tag="${base_image_tag}" \
-	--build-arg java_home="${java_home_arg}" \
 	. || exit 1
 if [ ${SKIP_DOWNLOAD} -eq 0 ]; then
 	[ -e "midpoint-dist-${tag}.tar.gz" ] && rm "midpoint-dist-${tag}.tar.gz"
