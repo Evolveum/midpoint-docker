@@ -646,18 +646,6 @@ spec:
     - name: pvc
       persistentVolumeClaim:
         claimName: \${4}
-  initContainers:
-    - name: mp-db-init
-      image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
-      command: ["/bin/bash","/opt/midpoint/bin/midpoint.sh","init-native"]
-      env:
-        - name: MP_INIT_DB_CONCAT
-          value: /opt/db-init/010-init.sql
-      volumeMounts:
-        - name: pvc
-          mountPath: /opt/db-init
-          subPath: init
-      imagePullPolicy: IfNotPresent
   containers:
     - name: postgresql
       image: 'postgres:\${5:-13}-alpine'
@@ -673,9 +661,6 @@ spec:
         - name: POSTGRES_PASSWORD
           value: SuperSecretPassword007
       volumeMounts:
-        - name: pvc
-          mountPath: /docker-entrypoint-initdb.d/
-          subPath: init
         - name: pvc
           mountPath: /var/lib/postgresql/data
           subPath: db-data
@@ -708,10 +693,29 @@ spec:
   initContainers:
     - name: mp-config-init
       image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
-      command: ["/bin/bash","/opt/midpoint/bin/midpoint.sh","init-native"]
+      command: [ "/bin/bash", "-c" ]
+      args:
+        - cd /opt/midpoint ;
+          bin/midpoint.sh init-native ;
+          echo ' - - - - - - ' ;
+          if [ $$(bin/ninja.sh -B verify 2>&1 | grep -c 'ERROR' ) -gt 0 ] ;
+          then
+          bin/ninja.sh -B run-sql --create --mode REPOSITORY ;
+          bin/ninja.sh -B run-sql --create --mode AUDIT ;
+          else
+          echo -e '\\n Repository init is not needed...' ;
+          fi ;
       env:
         - name: MP_INIT_CFG
           value: /opt/mp-home
+        - name: MP_SET_midpoint_repository_database
+          value: postgresql
+        - name: MP_SET_midpoint_repository_jdbcUsername
+          value: midpoint
+        - name: MP_SET_midpoint_repository_jdbcPassword
+          value: SuperSecretPassword007
+        - name: MP_SET_midpoint_repository_jdbcUrl
+          value: jdbc:postgresql://\${4}:5432/midpoint
       volumeMounts:
         - name: mpdata
           mountPath: /opt/mp-home
