@@ -383,6 +383,16 @@ function checkApp {
     return 0
 }
 
+function checkGenPass {
+	mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\([^"]*\\)".*/\\1/')"
+	if [ -z "\${mppw}" ]
+	then
+		mppw="\${2:-5ecr3t}"
+	fi
+	echo "\${mppw}"
+	return 0
+}
+
 function healthCheck {
     iteration=0
     status="\$(curl -s -f http://\${1}:\${2}/midpoint/actuator/health | tr -d '[:space:]' | sed "s|{\\"status\\":\\"\\([^\\"]*\\)\\"}|\\1|")"
@@ -403,12 +413,12 @@ function healthCheck {
 }
 
 function addUser {
-        curl -s --user administrator:5ecr3t -H "Content-Type: application/xml" -X POST -d "<user><name>\${3}</name></user>"  "http://\${1}:\${2}/midpoint/ws/rest/users"
+        curl -s --user administrator:\${4:-5ecr3t} -H "Content-Type: application/xml" -X POST -d "<user><name>\${3}</name></user>"  "http://\${1}:\${2}/midpoint/ws/rest/users"
 }
 
 function checkUserExists {
         suffix="-\$(ls -1 \${3}/pod-users*.lst 2>/dev/null | wc -l)"
-        curl -s --user administrator:5ecr3t -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
+        curl -s --user administrator:\${7:-5ecr3t} -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
         case \${4} in
             oid)
                 if [ \$(grep "^\${5}:" \${3}/pod-users\${suffix}.lst | wc -l) -gt 0 ]
@@ -487,12 +497,15 @@ else
     error=\$?
 fi
 
+mppw="\$(checkGenPass logs-\${timestamp}/h2/\${phase}/pod-mp.log 5ecr3t)"
+echo "Administrator Password: \${mppw}"
+
 echo -e "\\nGet 'administrator' Test..."
 if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator \${mppw}
     error=\$?
 fi
 
@@ -501,8 +514,8 @@ if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    addUser \${podIP} 8080 test110
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110
+    addUser \${podIP} 8080 test110 \${mppw}
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110 - \${mppw}
     error=\$?
 fi
 
@@ -560,7 +573,7 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110
+        checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110 - \${mppw}
         error=\$?
     fi
     
@@ -649,10 +662,14 @@ spec:
   initContainers:
     - name: mp-db-init
       image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
-      command: ["/bin/bash","/opt/midpoint/bin/midpoint.sh","init-native"]
-      env:
-        - name: MP_INIT_DB_CONCAT
-          value: /opt/db-init/010-init.sql
+      command: ["/bin/bash","-c"]
+      args:
+        - if [ -e /opt/midpoint/doc/config/sql/native-new ] ; then
+          cat /opt/midpoint/doc/config/sql/native-new/postgres-new.sql /opt/midpoint/doc/config/sql/native-new/postgres-new-audit.sql /opt/midpoint/doc/config/sql/native-new/postgres-new-quartz.sql  > /opt/db-init/010-init.sql ;
+          else 
+          cat /opt/midpoint/doc/config/sql/native/postgres.sql /opt/midpoint/doc/config/sql/native/postgres-audit.sql /opt/midpoint/doc/config/sql/native/postgres-quartz.sql  > /opt/db-init/010-init.sql ;
+          fi ;
+          wc -l /opt/db-init/010-init.sql ;
       volumeMounts:
         - name: pvc
           mountPath: /opt/db-init
@@ -805,6 +822,16 @@ function checkApp {
     return 0
 }
 
+function checkGenPass {
+        mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\([^"]*\\)".*/\\1/')"
+        if [ -z "\${mppw}" ]
+        then
+                mppw="\${2:-5ecr3t}"
+        fi
+        echo "\${mppw}"
+        return 0
+}
+
 function checkDB {
         iteration=0
         logItemFound=0
@@ -861,12 +888,12 @@ function healthCheck {
 }
 
 function addUser {
-        curl -s --user administrator:5ecr3t -H "Content-Type: application/xml" -X POST -d "<user><name>\${3}</name></user>"  "http://\${1}:\${2}/midpoint/ws/rest/users"
+        curl -s --user administrator:\${4:-5ecr3t} -H "Content-Type: application/xml" -X POST -d "<user><name>\${3}</name></user>"  "http://\${1}:\${2}/midpoint/ws/rest/users"
 }
 
 function checkUserExists {
         suffix="-\$(ls -1 \${3}/pod-users*.lst 2>/dev/null | wc -l)"
-        curl -s --user administrator:5ecr3t -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
+        curl -s --user administrator:\${7:-5ecr3t} -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
         case \${4} in
             oid)
                 if [ \$(grep "^\${5}:" \${3}/pod-users\${suffix}.lst | wc -l) -gt 0 ]
@@ -969,12 +996,15 @@ else
     error=\$?
 fi
 
+mppw="\$(checkGenPass logs-\${timestamp}/native/\${phase}/pod-mp.log 5ecr3t)"
+echo "Administrator Password: '\${mppw}'"
+
 echo -e "\\nGet 'administrator' Test..."
 if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator \${mppw}
     error=\$?
 fi
 
@@ -983,8 +1013,8 @@ if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    addUser \${podIP} 8080 test110
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110
+    addUser \${podIP} 8080 test110 \${mppw}
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110 - \${mppw}
     error=\$?
 fi
 
@@ -1073,7 +1103,7 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110
+        checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110 - \${mppw}
         error=\$?
     fi
     
