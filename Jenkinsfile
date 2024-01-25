@@ -314,6 +314,9 @@ spec:
         - name: gui
           containerPort: 8080
           protocol: TCP
+      env:
+        - name: MP_SET_midpoint_administrator_initialPassword
+          value: 5ecr3t
       volumeMounts:
         - name: mpdata
           mountPath: /opt/midpoint/var
@@ -749,6 +752,8 @@ spec:
           value: SuperSecretPassword007
         - name: MP_SET_midpoint_repository_jdbcUrl
           value: jdbc:postgresql://\${4}:5432/midpoint
+        - name: MP_SET_midpoint_administrator_initialPassword
+          value: 5ecr3t
         - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
           value: "1"
         - name: MP_NO_ENV_COMPAT
