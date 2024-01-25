@@ -498,14 +498,14 @@ else
 fi
 
 mppw="\$(checkGenPass logs-\${timestamp}/h2/\${phase}/pod-mp.log 5ecr3t)"
-echo "Administrator Password: \${mppw}"
+echo "Administrator Password: \\"\${mppw}\\""
 
 echo -e "\\nGet 'administrator' Test..."
 if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator \${mppw}
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator "\${mppw}"
     error=\$?
 fi
 
@@ -515,7 +515,7 @@ then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
     addUser \${podIP} 8080 test110 \${mppw}
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110 - \${mppw}
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110 - "\${mppw}"
     error=\$?
 fi
 
@@ -573,7 +573,7 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110 - \${mppw}
+        checkUserExists \${podIP} 8080 logs-\${timestamp}/h2/\${phase}/ name test110 - "\${mppw}"
         error=\$?
     fi
     
@@ -997,14 +997,14 @@ else
 fi
 
 mppw="\$(checkGenPass logs-\${timestamp}/native/\${phase}/pod-mp.log 5ecr3t)"
-echo "Administrator Password: '\${mppw}'"
+echo "Administrator Password: \\"\${mppw}\\""
 
 echo -e "\\nGet 'administrator' Test..."
 if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator \${mppw}
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ oid 00000000-0000-0000-0000-000000000002 administrator "\${mppw}"
     error=\$?
 fi
 
@@ -1014,7 +1014,7 @@ then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
     addUser \${podIP} 8080 test110 \${mppw}
-    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110 - \${mppw}
+    checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110 - "\${mppw}"
     error=\$?
 fi
 
@@ -1103,7 +1103,7 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110 - \${mppw}
+        checkUserExists \${podIP} 8080 logs-\${timestamp}/native/\${phase}/ name test110 - "\${mppw}"
         error=\$?
     fi
     
