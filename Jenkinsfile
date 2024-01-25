@@ -384,7 +384,7 @@ function checkApp {
 }
 
 function checkGenPass {
-	mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\([^"]*\\)".*/\\1/')"
+	mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
 	if [ -z "\${mppw}" ]
 	then
 		mppw="\${2:-5ecr3t}"
@@ -823,7 +823,7 @@ function checkApp {
 }
 
 function checkGenPass {
-        mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\([^"]*\\)".*/\\1/')"
+	mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
         if [ -z "\${mppw}" ]
         then
                 mppw="\${2:-5ecr3t}"
