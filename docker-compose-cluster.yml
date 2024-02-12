@@ -1,0 +1,224 @@
+version: "3.3"
+
+services:
+  midpoint_data:
+    image: postgres:16-alpine
+    environment:
+     - POSTGRES_PASSWORD=db.secret.pw.007
+     - POSTGRES_USER=midpoint
+     - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    networks:
+     - net
+    volumes:
+     - midpoint_data:/var/lib/postgresql/data
+
+  data_init:
+    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    command: >
+      bash -c "
+      cd /opt/midpoint ;
+      bin/midpoint.sh init-native ;
+      echo ' - - - - - - ' ;
+      bin/ninja.sh -B info >/dev/null 2>/tmp/ninja.log ;
+      grep -q \"ERROR\" /tmp/ninja.log && (
+      bin/ninja.sh run-sql --create --mode REPOSITORY  ;
+      bin/ninja.sh run-sql --create --mode AUDIT
+      ) ||
+      echo -e '\\n Repository init is not needed...' ;
+      "            
+    depends_on:
+     - midpoint_data
+    environment:
+     - MP_SET_midpoint_repository_jdbcUsername=midpoint
+     - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
+     - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
+     - MP_SET_midpoint_repository_database=postgresql
+     - MP_INIT_CFG=/opt/midpoint/var
+    networks:
+     - net
+    volumes:
+     - midpoint_home:/opt/midpoint/var
+
+  midpoint-server-1:
+    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    hostname: midpoint-server-1
+    depends_on:
+      data_init:
+        condition: service_completed_successfully
+    command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
+    ports:
+      - 8081:8080
+    environment:
+     - MP_SET_midpoint_repository_jdbcUsername=midpoint
+     - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
+     - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
+     - MP_SET_midpoint_repository_database=postgresql
+     - MP_SET_midpoint_administrator_initialPassword=Test5ecr3t
+     - MP_SET_midpoint_nodeIdSource=hostname
+     - MP_SET_midpoint_taskManager_clustered=true
+     - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
+     - MP_NO_ENV_COMPAT=1
+    networks:
+     - net
+    volumes:
+     - midpoint_home:/opt/midpoint/var
+     - log_node1:/opt/midpoint/var/log
+
+  midpoint-server-2:
+    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    hostname: midpoint-server-2
+    profiles: [ node2, node3, node4, proxy ]
+    depends_on:
+      midpoint-server-1:
+        condition: service_healthy
+    command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
+    ports:
+      - 8082:8080
+    environment:
+     - MP_SET_midpoint_repository_jdbcUsername=midpoint
+     - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
+     - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
+     - MP_SET_midpoint_repository_database=postgresql
+     - MP_SET_midpoint_administrator_initialPassword=Test5ecr3t
+     - MP_SET_midpoint_nodeIdSource=hostname
+     - MP_SET_midpoint_taskManager_clustered=true
+     - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
+     - MP_NO_ENV_COMPAT=1
+    networks:
+     - net
+    volumes:
+     - midpoint_home:/opt/midpoint/var
+     - log_node2:/opt/midpoint/var/log
+
+  midpoint-server-3:
+    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    hostname: midpoint-server-3
+    profiles: [ node3, node4, proxy ]
+    depends_on:
+      midpoint-server-2:
+        condition: service_started
+    command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
+    ports:
+      - 8083:8080
+    environment:
+     - MP_SET_midpoint_repository_jdbcUsername=midpoint
+     - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
+     - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
+     - MP_SET_midpoint_repository_database=postgresql
+     - MP_SET_midpoint_administrator_initialPassword=Test5ecr3t
+     - MP_SET_midpoint_nodeIdSource=hostname
+     - MP_SET_midpoint_taskManager_clustered=true
+     - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
+     - MP_NO_ENV_COMPAT=1
+    networks:
+     - net
+    volumes:
+     - midpoint_home:/opt/midpoint/var
+     - log_node3:/opt/midpoint/var/log
+
+  midpoint-server-4:
+    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    hostname: midpoint-server-4
+    profiles: [ node4, proxy ]
+    depends_on:
+      midpoint-server-3:
+        condition: service_started
+    command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
+    ports:
+      - 8084:8080
+    environment:
+     - MP_SET_midpoint_repository_jdbcUsername=midpoint
+     - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
+     - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
+     - MP_SET_midpoint_repository_database=postgresql
+     - MP_SET_midpoint_administrator_initialPassword=Test5ecr3t
+     - MP_SET_midpoint_nodeIdSource=hostname
+     - MP_SET_midpoint_taskManager_clustered=true
+     - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
+     - MP_NO_ENV_COMPAT=1
+    networks:
+     - net
+    volumes:
+     - midpoint_home:/opt/midpoint/var
+     - log_node4:/opt/midpoint/var/log
+
+  proxy-init:
+    image: nginx:stable
+    profiles: [ proxy ]
+    command: >
+        bash -c "
+        rm /etc/nginx/conf.d/default.conf;
+        mkdir /etc/nginx/certs;
+        openssl req -newkey rsa:2048 -keyout /etc/nginx/certs/key.pem -nodes -subj '/CN=Cluster demo' -addext 'subjectAltName = DNS:localhost, DNS: localhost.localdomain, IP:127.0.0.1, IP:::1' -out /etc/nginx/certs/cert.pem -x509 -days 7 ;
+        openssl x509 -in /etc/nginx/certs/cert.pem -text -noout ;
+        echo ' upstream midpoint-backend {' > /etc/nginx/conf.d/midpoint.conf ;
+        echo '  ip_hash;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  server midpoint-server-1:8080 max_fails=3 fail_timeout=30s;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  server midpoint-server-2:8080 max_fails=3 fail_timeout=30s;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  server midpoint-server-3:8080 max_fails=3 fail_timeout=30s;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  server midpoint-server-4:8080 max_fails=3 fail_timeout=30s;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo ' }' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo ' server {' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  listen 443 ssl default_server;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  server_name localhost;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  ssl_certificate /etc/nginx/certs/cert.pem;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  ssl_certificate_key /etc/nginx/certs/key.pem;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  proxy_ssl_protocols TLSv1.2 TLSv1.3;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  location / {' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   rewrite ^/$ /midpoint/ last;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   rewrite ^/midpoint$ /midpoint/ last;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   proxy_set_header X-Real-IP $$remote_addr;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   proxy_set_header X-Forwarded-Host: $$host;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   proxy_set_header X-Forwarded-Proto: $$scheme;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '   proxy_pass http://midpoint-backend;' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '  }' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo '' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo ' }' >> /etc/nginx/conf.d/midpoint.conf ;
+        echo ' server {' > /etc/nginx/conf.d/default.conf ;
+        echo '  listen       80 default_server;' >> /etc/nginx/conf.d/default.conf ;
+        echo '  listen  [::]:80;' >> /etc/nginx/conf.d/default.conf ;
+        echo '  server_name _;' >> /etc/nginx/conf.d/default.conf ;
+        echo '' >> /etc/nginx/conf.d/default.conf ;
+        echo '  return 301 https://$$host$$request_uri;' >> /etc/nginx/conf.d/default.conf ;
+        echo '' >> /etc/nginx/conf.d/default.conf ;
+        echo ' }' >> /etc/nginx/conf.d/default.conf ;
+        cat /etc/nginx/conf.d/*.conf
+        "
+    volumes:
+     - proxy_config:/etc/nginx
+
+  proxy:
+    image: nginx:stable
+    profiles: [ proxy ]
+    depends_on:
+      proxy-init:
+        condition: service_completed_successfully
+      midpoint-server-4:
+        condition: service_started
+    ports:
+     - 80:80
+     - 443:443
+     - 8080:80
+    networks:
+     - net
+    volumes:
+     - proxy_config:/etc/nginx
+
+networks:
+  net:
+    driver: bridge
+
+volumes:
+  midpoint_data:
+  midpoint_home:
+  log_node1:
+  log_node2:
+  log_node3:
+  log_node4:
+  proxy_config:
