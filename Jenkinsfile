@@ -1046,7 +1046,6 @@ else
     kubectl logs -n jenkins \${podname} -c mp-config-init > logs-\${timestamp}/native/\${phase}/pod-mp-init-full.log
     kubectl logs -n jenkins \${podname} -c mp > logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
     kubectl delete -n jenkins \${podname}
-    kubectl logs -n jenkins \${poddbname} -c mp-db-init > logs-\${timestamp}/native/\${phase}/pod-db-init-full.log
     kubectl logs -n jenkins \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
     kubectl delete -n jenkins \${poddbname}
 
@@ -1144,7 +1143,6 @@ kubectl logs -n jenkins \${podname} -c mp > logs-\${timestamp}/native/\${phase}/
 
 kubectl delete -n jenkins \${podname} \${pvcname}
 
-kubectl logs -n jenkins \${poddbname} -c mp-db-init > logs-\${timestamp}/native/\${phase}/pod-db-init-full.log
 kubectl logs -n jenkins \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
 
 kubectl delete -n jenkins \${poddbname} \${pvcdbname}
