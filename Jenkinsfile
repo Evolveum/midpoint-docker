@@ -1,4 +1,3 @@
-
 podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
     containerTemplate(
         name: "jnlp", 
@@ -392,10 +391,10 @@ function checkGenPass {
 		mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
 		if [ -z "\${mppw}" ]
 		then
-			mppw="Test5ecr3t"
+			mppw="\${2:-Test5ecr3t}"
 		fi
 	else
-		mppw="\${2:-5ecr3t}"
+		mppw="5ecr3t"
 	fi
 	echo "\${mppw}"
 	return 0
@@ -505,7 +504,7 @@ else
     error=\$?
 fi
 
-mppw="\$(checkGenPass logs-\${timestamp}/h2/\${phase}/pod-mp.log 5ecr3t)"
+mppw="\$(checkGenPass logs-\${timestamp}/h2/\${phase}/pod-mp.log Test5ecr3t)"
 echo "Administrator Password: \\"\${mppw}\\""
 
 echo -e "\\nGet 'administrator' Test..."
@@ -718,6 +717,11 @@ spec:
       args:
         - cd /opt/midpoint ;
           bin/midpoint.sh init-native ;
+          echo ' - - - < 4.8 ninja sh does not apply env var - - - ' ;
+          sed -i "/jdbcUrl/c\\<jdbcUrl>\${MP_SET_midpoint_repository_jdbcUrl}</jdbcUrl>" /opt/midpoint/var/config.xml ;
+          sed -i "/jdbcUsername/c\\<jdbcUsername>\${MP_SET_midpoint_repository_jdbcUrl}</jdbcUsername>" /opt/midpoint/var/config.xml ;
+          sed -i "/jdbcPassword/c\\<jdbcPassword>\${MP_SET_midpoint_repository_jdbcUrl}</jdbcPassword>" /opt/midpoint/var/config.xml ;
+	  cat /opt/midpoint/var/config.xml ;
           echo ' - - - - - - ' ;
           bin/ninja.sh -B info >/dev/null 2>/tmp/ninja.log ;
           grep -q "ERROR" /tmp/ninja.log && (
@@ -727,7 +731,7 @@ spec:
           echo -e '\\n Repository init is not needed...' ;
       env:
         - name: MP_INIT_CFG
-          value: /opt/mp-home
+          value: /opt/midpoint/var
         - name: MP_SET_midpoint_repository_database
           value: postgresql
         - name: MP_SET_midpoint_repository_jdbcUsername
@@ -738,7 +742,7 @@ spec:
           value: jdbc:postgresql://\${4}:5432/midpoint
       volumeMounts:
         - name: mpdata
-          mountPath: /opt/mp-home
+          mountPath: /opt/midpoint/var
       imagePullPolicy: IfNotPresent
   containers:
     - name: mp
@@ -837,10 +841,10 @@ function checkGenPass {
                 mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
                 if [ -z "\${mppw}" ]
                 then
-                        mppw="Test5ecr3t"
+                        mppw="\${2:-Test5ecr3t}"
                 fi
         else
-                mppw="\${2:-5ecr3t}"
+                mppw="5ecr3t"
         fi
         echo "\${mppw}"
         return 0
@@ -1010,7 +1014,7 @@ else
     error=\$?
 fi
 
-mppw="\$(checkGenPass logs-\${timestamp}/native/\${phase}/pod-mp.log 5ecr3t)"
+mppw="\$(checkGenPass logs-\${timestamp}/native/\${phase}/pod-mp.log Test5ecr3t)"
 echo "Administrator Password: \\"\${mppw}\\""
 
 echo -e "\\nGet 'administrator' Test..."
