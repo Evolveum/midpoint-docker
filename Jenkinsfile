@@ -718,9 +718,9 @@ spec:
         - cd /opt/midpoint ;
           bin/midpoint.sh init-native ;
           echo ' - - - < 4.8 ninja sh does not apply env var - - - ' ;
-          sed -i "/jdbcUrl/c\\<jdbcUrl>\${MP_SET_midpoint_repository_jdbcUrl}</jdbcUrl>" /opt/midpoint/var/config.xml ;
-          sed -i "/jdbcUsername/c\\<jdbcUsername>\${MP_SET_midpoint_repository_jdbcUrl}</jdbcUsername>" /opt/midpoint/var/config.xml ;
-          sed -i "/jdbcPassword/c\\<jdbcPassword>\${MP_SET_midpoint_repository_jdbcUrl}</jdbcPassword>" /opt/midpoint/var/config.xml ;
+          sed -i "/jdbcUrl/c\\<jdbcUrl>jdbc:postgresql://\${4}:5432/midpoint</jdbcUrl>" /opt/midpoint/var/config.xml ;
+          sed -i "/jdbcUsername/c\\<jdbcUsername>midpoint</jdbcUsername>" /opt/midpoint/var/config.xml ;
+          sed -i "/jdbcPassword/c\\<jdbcPassword>SuperSecretPassword007</jdbcPassword>" /opt/midpoint/var/config.xml ;
           cat /opt/midpoint/var/config.xml ;
           echo ' - - - - - - ' ;
           bin/ninja.sh -B info >/dev/null 2>/tmp/ninja.log ;
