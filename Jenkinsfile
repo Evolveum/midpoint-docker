@@ -314,6 +314,9 @@ spec:
         - name: gui
           containerPort: 8080
           protocol: TCP
+      env:
+        - name: MP_SET_midpoint_administrator_initialPassword
+          value: Test5ecr3t
       volumeMounts:
         - name: mpdata
           mountPath: /opt/midpoint/var
@@ -384,10 +387,15 @@ function checkApp {
 }
 
 function checkGenPass {
-	mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
-	if [ -z "\${mppw}" ]
+	if [ \$( grep -c "Please change administrator password  after first login.") -gt 0 ]
 	then
-		mppw="\${2:-5ecr3t}"
+		mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
+		if [ -z "\${mppw}" ]
+		then
+			mppw="\${2:-Test5ecr3t}"
+		fi
+	else
+		mppw="5ecr3t"
 	fi
 	echo "\${mppw}"
 	return 0
@@ -659,22 +667,6 @@ spec:
     - name: pvc
       persistentVolumeClaim:
         claimName: \${4}
-  initContainers:
-    - name: mp-db-init
-      image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
-      command: ["/bin/bash","-c"]
-      args:
-        - if [ -e /opt/midpoint/doc/config/sql/native-new ] ; then
-          cat /opt/midpoint/doc/config/sql/native-new/postgres-new.sql /opt/midpoint/doc/config/sql/native-new/postgres-new-audit.sql /opt/midpoint/doc/config/sql/native-new/postgres-new-quartz.sql  > /opt/db-init/010-init.sql ;
-          else 
-          cat /opt/midpoint/doc/config/sql/native/postgres.sql /opt/midpoint/doc/config/sql/native/postgres-audit.sql /opt/midpoint/doc/config/sql/native/postgres-quartz.sql  > /opt/db-init/010-init.sql ;
-          fi ;
-          wc -l /opt/db-init/010-init.sql ;
-      volumeMounts:
-        - name: pvc
-          mountPath: /opt/db-init
-          subPath: init
-      imagePullPolicy: IfNotPresent
   containers:
     - name: postgresql
       image: 'postgres:\${5:-13}-alpine'
@@ -690,9 +682,6 @@ spec:
         - name: POSTGRES_PASSWORD
           value: SuperSecretPassword007
       volumeMounts:
-        - name: pvc
-          mountPath: /docker-entrypoint-initdb.d/
-          subPath: init
         - name: pvc
           mountPath: /var/lib/postgresql/data
           subPath: db-data
@@ -725,10 +714,28 @@ spec:
   initContainers:
     - name: mp-config-init
       image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
-      command: ["/bin/bash","/opt/midpoint/bin/midpoint.sh","init-native"]
+      command: [ "/bin/bash", "-c" ]
+      args:
+        - cd /opt/midpoint ;
+          bin/midpoint.sh init-native ;
+          echo ' - - - - - - ' ;
+          bin/ninja.sh -B info >/dev/null 2>/tmp/ninja.log ;
+          grep -q "ERROR" /tmp/ninja.log && (
+          bin/ninja.sh -B run-sql --create --mode REPOSITORY  ;
+          bin/ninja.sh -B run-sql --create --mode AUDIT
+          ) ||
+          echo -e '\\n Repository init is not needed...' ;
       env:
         - name: MP_INIT_CFG
           value: /opt/mp-home
+        - name: MP_SET_midpoint_repository_database
+          value: postgresql
+        - name: MP_SET_midpoint_repository_jdbcUsername
+          value: midpoint
+        - name: MP_SET_midpoint_repository_jdbcPassword
+          value: SuperSecretPassword007
+        - name: MP_SET_midpoint_repository_jdbcUrl
+          value: jdbc:postgresql://\${4}:5432/midpoint
       volumeMounts:
         - name: mpdata
           mountPath: /opt/mp-home
@@ -749,6 +756,8 @@ spec:
           value: SuperSecretPassword007
         - name: MP_SET_midpoint_repository_jdbcUrl
           value: jdbc:postgresql://\${4}:5432/midpoint
+        - name: MP_SET_midpoint_administrator_initialPassword
+          value: Test5ecr3t
         - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
           value: "1"
         - name: MP_NO_ENV_COMPAT
@@ -823,10 +832,15 @@ function checkApp {
 }
 
 function checkGenPass {
-	mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
-        if [ -z "\${mppw}" ]
+        if [ \$( grep -c "Please change administrator password  after first login.") -gt 0 ]
         then
-                mppw="\${2:-5ecr3t}"
+                mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
+                if [ -z "\${mppw}" ]
+                then
+                        mppw="\${2:-Test5ecr3t}"
+                fi
+        else
+                mppw="5ecr3t"
         fi
         echo "\${mppw}"
         return 0
