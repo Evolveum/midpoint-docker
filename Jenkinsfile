@@ -387,19 +387,17 @@ function checkApp {
 }
 
 function checkGenPass {
-	set -x
 	if [ \$( grep -c "Please change administrator password  after first login." \${1} ) -gt 0 ]
 	then
 		mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
 		if [ -z "\${mppw}" ]
 		then
-			mppw="\${2:-Test5ecr3t}"
+			mppw="Test5ecr3t"
 		fi
 	else
-		mppw="5ecr3t"
+		mppw="\${2:-5ecr3t}"
 	fi
 	echo "\${mppw}"
-	set +x
 	return 0
 }
 
@@ -834,19 +832,17 @@ function checkApp {
 }
 
 function checkGenPass {
-	set -x
         if [ \$( grep -c "Please change administrator password  after first login." \${1} ) -gt 0 ]
         then
                 mppw="\$(grep "Administrator initial password" \${1} | sed 's/[^"]*"\\(.*\\)"[^"]*/\\1/')"
                 if [ -z "\${mppw}" ]
                 then
-                        mppw="\${2:-Test5ecr3t}"
+                        mppw="Test5ecr3t"
                 fi
         else
-                mppw="5ecr3t"
+                mppw="\${2:-5ecr3t}"
         fi
         echo "\${mppw}"
-	set +x
         return 0
 }
 
