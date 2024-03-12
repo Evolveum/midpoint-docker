@@ -1,0 +1,37 @@
+# MidPoint
+ 
+MidPoint is the leading open source identity platform and has a rich feature set combining identity management with identity governance.
+While recognized by Gartner as a complete IGA suite, the possibility of fully covering both technological and business requirements make midPoint a perfect option for organizations that are looking for synergy resulting from implementing business aspects into administration.
+Its regular annual releases ensure midPoint is continuously moving forward while having stability and security as two of its highest priorities.
+
+## Docker Images
+
+All midPoint docker images are published at link:https://hub.docker.com/r/evolveum/midpoint[Docker Hub].
+
+### Download image:
+
+.download image without building
+[source,bash]
+----
+docker pull evolveum/midpoint
+----
+
+### Build from git repository  
+
+.clone git repository
+[source,bash]
+----
+git clone https://github.com/Evolveum/midpoint-docker.git
+cd midpoint-docker
+----
+
+.build
+[source,bash]
+----
+docker build -t evolveum/midpoint .
+----
+
+## See also
+
+* link:https://docs.evolveum.com/midpoint/install/containers/[MidPoint In Container] docs page
+* link:https://docs.evolveum.com/midpoint/quickstart/[Quick Start] docs page
