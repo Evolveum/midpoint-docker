@@ -5,6 +5,8 @@ It is a comprehensive feature-rich system that has been continuously developed a
 MidPoint is available under the terms of Apache License and European Union Public License.
 Its regular annual releases ensure midPoint is continuously moving forward while having stability and security as two of its highest priorities.
 
+MidPoint is known for its excellent integration capabilities and data centralization, which enables organizations to be in control of identity and accesses it has.
+
 ## Docker Images
 
 All midPoint docker images are published at link:https://hub.docker.com/r/evolveum/midpoint[Docker Hub].
