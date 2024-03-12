@@ -1,9 +1,0 @@
-dn: ou=groups,dc=evolveum,dc=com
-objectClass: top
-objectClass: organizationalUnit
-ou: groups
-
-dn: ou=people,dc=evolveum,dc=com
-objectClass: top
-objectClass: organizationalUnit
-ou: people
