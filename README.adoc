@@ -1,7 +1,8 @@
 # MidPoint
  
-MidPoint is the leading open source identity platform and has a rich feature set combining identity management with identity governance.
-While recognized by Gartner as a complete IGA suite, the possibility of fully covering both technological and business requirements make midPoint a perfect option for organizations that are looking for synergy resulting from implementing business aspects into administration.
+MidPoint is the leading open source identity governance and administration platform (IGA).
+It is a comprehensive feature-rich system that has been continuously developed and maintained by a full-time team of professionals.
+MidPoint is available under the terms of Apache License and European Union Public License.
 Its regular annual releases ensure midPoint is continuously moving forward while having stability and security as two of its highest priorities.
 
 ## Docker Images
