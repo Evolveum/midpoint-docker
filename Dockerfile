@@ -8,13 +8,13 @@ ARG imagename=midpoint
 ARG JAVA_VERSION=17
 
 ### values for Ubuntu based image ###
-#ARG base_image=ubuntu
-#ARG base_image_tag=22.04
+ARG base_image=ubuntu
+ARG base_image_tag=22.04
 ####################################
 
 ### values for Rocky linux based image ###
-ARG base_image=rockylinux
-ARG base_image_tag=9.3
+#ARG base_image=rockylinux
+#ARG base_image_tag=9.3
 #####################################
 
 ### values for Alpine based image ###
