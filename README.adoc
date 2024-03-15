@@ -1,5 +1,5 @@
-# MidPoint
- 
+= MidPoint
+
 MidPoint is the leading open source identity governance and administration platform (IGA).
 It is a comprehensive feature-rich system that has been continuously developed and maintained by a full-time team of professionals.
 MidPoint is available under the terms of Apache License and European Union Public License.
@@ -7,11 +7,11 @@ Its regular annual releases ensure midPoint is continuously moving forward while
 
 MidPoint is known for its excellent integration capabilities and data centralization, which enables organizations to be in control of identity and accesses it has.
 
-## Docker Images
+== Docker Images
 
 All midPoint docker images are published at link:https://hub.docker.com/r/evolveum/midpoint[Docker Hub].
 
-### Download image:
+== Download image:
 
 .download image without building
 [source,bash]
@@ -19,7 +19,7 @@ All midPoint docker images are published at link:https://hub.docker.com/r/evolve
 docker pull evolveum/midpoint
 ----
 
-### Build from git repository  
+== Build from git repository
 
 .clone git repository
 [source,bash]
@@ -34,7 +34,110 @@ cd midpoint-docker
 docker build -t evolveum/midpoint .
 ----
 
-## See also
+[NOTE]
+====
+The result will be Ubuntu based (default) image with the development midPoint build with the tag latest.
+
+*evolveum/midpoint:latest*
+====
+
+=== Build option
+
+The Dockerfile definition using the build arguments to offer the easy way to customize what to build.
+
+[%autowidth]
+.Available build arguments for build customization
+|===
+| Argument | Meaning | default | possible values
+
+| MP_VERSION
+| Version of the midpoint to download.
+| latest
+| any released version available on nexus to download +
+e.g. 4.8, latest
+
+| SKIP_DOWNLOAD
+| The flag to set if to use download the distribution or use local one.
+In case of local one the *MP_DIST_FILE* has to be set correctly.
+| 0
+| 0, 1
+
+| MP_DIST_FILE
+| The name of dist file to use instead of the downloading from nexus.
+This option require also to set *SKIP_DOWNLOAD* to 1
+| midpoint-dist.tar.gz
+| 
+
+| JAVA_VERSION
+| Java version to install into the builded image.
+| 17
+|
+
+| base_image
+| The base OS image
+| ubuntu
+| We are supporting: +
+- ubuntu +
+- alpine +
+- rockylinux
+
+| base_image_tag
+| The tag of base OS image to use.
+| 22.04
+| e.g. +
+- 22.04 (Ubuntu) +
+- latest (Alpine) +
+- 9.3 (Rocky Linux) + 
+
+|===
+
+The important *docker build* arguments relevant for our context are listed in following table.
+
+.relevant docker build arguments
+|===
+| argument | meaning | sample value
+
+| -t
+| the tag for resulting image
+| -t evolveum/midpoint +
+-t evolveum/midpoint:latest +
+-t evolveum/midpoint:latest-alpine +
+-t evolveum/midpoint:4.8-alpine
+
+| --build-arg
+| argument used during the build process +
+(check the table with available arguments)
+| --build-arg SKIP_DOWNLOAD=1 +
+--build-arg MP_DIST_FILE=midpoint-dist-latest.tar.gz +
+--build-arg base_image=alpine +
+--build-arg base_image_tag=latest +
+--build-arg MP_VERSION=4.8
+
+| <context>
+| The directory available during the build as "root" directory.
+| .
+
+|===
+
+Few examples:
+
+.4.8.3 midPoint release based on alpine latest (download during build)
+[source,bash]
+docker build -t evolveum/midpoint:4.8-alpine --build-arg MP_VERSION=4.8 --build-arg base_image=alpine --build-arg base_image_tag=latest .
+
+.latest midPoint build based on rockylinux 9.3 (download during build)
+[source,bash]
+docker build -t evolveum/midpoint:latest-rockylinux --build-arg base_image=rockylinux --build-arg base_image_tag=9.3 .
+
+.custom midPoint build based on ubuntu 22.04 (local dist file midpoint-dist.tar.gz)
+[source,bash]
+docker build -t evolveum/midpoint:custom --build-arg SKIP_DOWNLOAD=1 .
+ 
+.latest midPoint build based on alpine latest (local dist file midpoint-dist-latest.tar.gz)
+[source,bash]
+docker build -t evolveum/midpoint:custom --build-arg SKIP_DOWNLOAD=1 --build-arg MP_DIST_FILE=midpoint-dist-latest.tar.gz --build-arg base_image=alpine --build-arg base_image_tag=latest .
+
+== See also
 
 * link:https://docs.evolveum.com/midpoint/install/containers/[MidPoint In Container] docs page
 * link:https://docs.evolveum.com/midpoint/quickstart/[Quick Start] docs page
