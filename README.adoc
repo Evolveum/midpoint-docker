@@ -57,13 +57,13 @@ The Dockerfile definition using the build arguments to offer the easy way to cus
 e.g. 4.8, latest
 
 | SKIP_DOWNLOAD
-| The flag to set if to use download the distribution or use local one.
+| The flag to set if to download the distribution file or use local one.
 In case of local one the *MP_DIST_FILE* has to be set correctly.
 | 0
 | 0, 1
 
 | MP_DIST_FILE
-| The name of dist file to use instead of the downloading from nexus.
+| The name of distribution file to use instead of the downloading it from nexus.
 This option require also to set *SKIP_DOWNLOAD* to 1
 | midpoint-dist.tar.gz
 | 
