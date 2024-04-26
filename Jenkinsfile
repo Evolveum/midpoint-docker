@@ -1190,16 +1190,29 @@ then
 else
     distInfo="\$(grep "^Nexus:" logs-\${timestamp}/kaniko.log)"
     osSuffix="-\$(echo "${IMAGEOS}" | cut -d "-" -f 1)"
-    [ "\${osSuffix}" == "-ubuntu" ] && osSuffix=""
     autotag=""
+    [ "\${osSuffix}" == "-ubuntu" ] && autotag="${DOCKERTAG}"
     [ "${DOCKERTAG}\${osSuffix}" == "4.0-support-alpine" ] && autotag="4.0support-alpine"
+    finalTags=""
+    echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
     for pushTag in ${DOCKERTAG}\${osSuffix} ${ALTDOCTAG} \${autotag}
     do
         [ "\${pushTag}" == "-" -o \${pushTag} == "" ] && continue
-        echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-        echo "Processing docker tag : \${pushTag}"
-        echo " - - - - - - - - - - -"
-        cat <<EOF | kubectl apply -f - | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+	if [ \${#pushTag} -gt \$(echo -n "\${pushTag}" | tr -d ":" | wc -c) ]
+	then
+		echo "Processing docker tag : \${pushTag}"
+		finalTags="\${finalTags}\n        - \"--destination=\${pushTag}\""
+	else
+        	echo "Processing docker tag : evolveum/midpoint:\${pushTag}"
+	        finalTags="\${finalTags}\n        - \"--destination=evolveum/midpoint:\${pushTag}\""
+	fi
+    done
+    if [ "\${finalTags}" == "" ]
+    then
+	echo "No tag for push is available...
+	exit 1
+    fi
+    cat <<EOF | kubectl apply -f - | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1230,8 +1243,7 @@ spec:
       image: gcr.io/kaniko-project/executor:latest
       args:
         - "--dockerfile=Dockerfile"
-        - "--context=dir:///workspace"
-        - "--destination=evolveum/midpoint:\${pushTag}"
+        - "--context=dir:///workspace"\${finalTags}
       volumeMounts:
         - name: data
           mountPath: /workspace
@@ -1242,21 +1254,21 @@ spec:
   restartPolicy: Never
 EOF
     
+    podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    while [ "\${podIPs:0:1}" == ":" ]
+    do
+        sleep 5
         podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
-        while [ "\${podIPs:0:1}" == ":" ]
-        do
-            sleep 5
-            podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
-        done
-        podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
+    done
+    podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
 
-        echo "Pushing Dockerfile..."
-        ret=1
-        iteration=0
-        while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
-        do
-            sleep 5
-    	    cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
+    echo "Pushing Dockerfile..."
+    ret=1
+    iteration=0
+    while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
+    do
+        sleep 5
+        cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
 FROM registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}
 LABEL AppBuildID="\${distInfo:-N/A}"
 EOF
@@ -1280,22 +1292,21 @@ EOF
 	}
 }
 EOF
-    	    ret=\$?
-    	    iteration=\$(( \${iteration} + 1 ))
-        done
-        [ \${ret} -eq 0 ] && echo "Docker creds have been pushed..."
-
-        status=\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.phase}")
-        while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
-        do
-            sleep 15
-            status=\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.phase}")
-        done
-        echo "Downloading the log..."
-        kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko-init > logs-\${timestamp}/kaniko-push-\${pushTag}-init.log
-        kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko | tee logs-\${timestamp}/kaniko-push-\${pushTag}.log | grep "Applying\\|ush"
-        kubectl delete -n jenkins pod/kaniko-push-\${timestamp}
+    	ret=\$?
+    	iteration=\$(( \${iteration} + 1 ))
     done
+    [ \${ret} -eq 0 ] && echo "Docker creds have been pushed..."
+
+    status=\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.phase}")
+    while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+    do
+        sleep 15
+        status=\$(kubectl get -n jenkins pod/kaniko-push-\${timestamp} -o=jsonpath="{.status.phase}")
+    done
+    echo "Downloading the log..."
+    kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko-init > logs-\${timestamp}/kaniko-push-\${pushTag}-init.log
+    kubectl logs -n jenkins kaniko-push-\${timestamp} -c kaniko | tee logs-\${timestamp}/kaniko-push-\${pushTag}.log | grep "Applying\\|ush"
+    kubectl delete -n jenkins pod/kaniko-push-\${timestamp}
 fi
 
 [ \${error} -ne 0 ] && exit 1
