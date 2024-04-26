@@ -1209,7 +1209,7 @@ else
     done
     if [ "\${finalTags}" == "" ]
     then
-	echo "No tag for push is available...
+	echo "No tag for push is available..."
 	exit 1
     fi
     cat <<EOF | kubectl apply -f - | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
