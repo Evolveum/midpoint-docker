@@ -1,15 +1,15 @@
-ARG MP_VERSION=latest
+ARG MP_VERSION=devel
 ARG MP_DIR=/opt/midpoint
 ARG MP_DIST_FILE=midpoint-dist.tar.gz
 ARG MP_DIST_INFO=N/A
 ARG SKIP_DOWNLOAD=0
 ARG maintainer=evolveum
 ARG imagename=midpoint
-ARG JAVA_VERSION=17
+ARG JAVA_VERSION=21
 
 ### values for Ubuntu based image ###
-ARG base_image=ubuntu
-ARG base_image_tag=22.04
+#ARG base_image=ubuntu
+#ARG base_image_tag=22.04
 ####################################
 
 ### values for Rocky linux based image ###
@@ -18,8 +18,8 @@ ARG base_image_tag=22.04
 #####################################
 
 ### values for Alpine based image ###
-#ARG base_image=alpine
-#ARG base_image_tag=latest
+ARG base_image=alpine
+ARG base_image_tag=latest
 #####################################
 
 FROM ${base_image}:${base_image_tag}

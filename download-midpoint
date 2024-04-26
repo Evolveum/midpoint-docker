@@ -19,6 +19,9 @@ base="${baseURL}/repository"
 restBrowseBase="${baseURL}/service/rest/repository/browse"
 groupIdUrl="${groupId//.//}"
 
+latestDevel="devel"
+latestStable="latest"
+
 MP_VER=""
 l_MP_VER=""
 URL=""
@@ -31,11 +34,18 @@ if [ "${MP_VER}" != "" ]
 then
 	echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
 else
-	if [ $( curl -s ${restBrowseBase}/releases/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
+	if [ "${MP_VERSION}" == "${latestStable}" ]
 	then
-		MP_VER="${MP_VERSION}"
 		repo="releases"
-		echo "Found in the list of releases on nexus - ${MP_VER} @ ${repo}"
+		MP_VER="$( curl -s ${restBrowseBase}/releases/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 | grep "^[0-9\.]*$" | tail -n 1)"
+		echo "Last stable release has been selected - ${MP_VER} @ ${repo}"
+	else
+		if [ $( curl -s ${restBrowseBase}/releases/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
+		then
+			MP_VER="${MP_VERSION}"
+			repo="releases"
+			echo "Found in the list of releases on nexus - ${MP_VER} @ ${repo}"
+		fi
 	fi
 fi
 
@@ -48,7 +58,7 @@ fi
 if [ "${URL}" == "" ] ; then
   l_repo="${repo:-snapshots}"
   snapshotsList="$( curl -s ${restBrowseBase}/${l_repo}/${groupIdUrl}/${artifactId}/ | grep "<a" | grep -v "Parent\|metadata" | cut -d ">" -f 3 | cut -d "<" -f 1 )"
-  if [[ "${MP_VERSION}" == "latest" ]] && [[ "${MP_VER}" == "" ]] ; then
+  if [[ "${MP_VERSION}" == "${latestDevel}" ]] && [[ "${MP_VER}" == "" ]] ; then
 	  l_MP_VER="$( echo "${snapshotsList}" | tail -1 )"
   else
 	  if [[ "${MP_VER}" != "" ]] ; then
