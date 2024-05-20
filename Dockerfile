@@ -97,6 +97,7 @@ RUN if [ "${base_image}" = "ubuntu" ]; \
   then dnf update -y && dnf install -y java-${JAVA_VERSION}-openjdk-headless tzdata bash which && dnf clean all -y ; \
   else apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu ; \
   fi ; fi ; \
+  mkdir -p "${MP_DIR}/bin/" ; \
   if [ ! -e "${MP_DIR}/bin/setenv.sh" ] ; then echo "#!/usr/bin/env bash" > "${MP_DIR}/bin/setenv.sh" ; fi ; \
   echo -n "export JAVA_HOME=" >> "${MP_DIR}/bin/setenv.sh" ; \
   find /usr/lib/jvm -maxdepth 1 -name "*openjdk*" -name "*${JAVA_VERSION}*" -type d | head -1 >> ${MP_DIR}/bin/setenv.sh ; \
