@@ -87,8 +87,6 @@ ENV MP_SET_midpoint_repository_database=h2 \
 
 COPY container_files/usr-local-bin/* /usr/local/bin/
 
-COPY --from=0 ${MP_DIR} ${MP_DIR}/
-
 RUN if [ "${base_image}" = "ubuntu" ]; \
   then sed 's/main$/main universe/' -i /etc/apt/sources.list && \
        apt-get update -y && \
@@ -122,3 +120,4 @@ RUN echo "fix for starting midpoint around release 4.2..." ; \
   if [ $(grep -c "container" ${MP_DIR}/bin/midpoint.sh) -eq 0 ]; then \
   cp /usr/local/bin/midpoint.sh ${MP_DIR}/bin/midpoint.sh && echo "midpoint.sh file replaced" ; fi 
 
+COPY --from=0 ${MP_DIR} ${MP_DIR}/
