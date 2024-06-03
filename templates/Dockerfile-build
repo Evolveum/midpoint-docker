@@ -1,0 +1,30 @@
+ARG base_image=alpine
+ARG base_image_tag=latest
+
+FROM ${base_image}:${base_image_tag}
+
+RUN cat <<EOF >> /opt/download_crane
+set -x
+wget -O - $(wget -O - https://github.com/google/go-containerregistry/releases | grep Linux_x86_64.tar.gz | grep "<a href" | sed "s/[^\"]*\"\([^\"]*\)\".*/https:\/\/github.com\1/") | tar -xvzC /usr/local/bin crane
+EOF
+
+RUN cat <<EOF >> /usr/local/bin/prepare_layer
+#!/bin/bash
+[ -e opt ] && exit 1
+mkdir -p opt/midpoint
+tar -xzf "\${1}" -C opt/midpoint --strip-component=1
+tar -cf midpoint-opt-\${2}.tar opt
+rm -rf opt
+EOF
+
+RUN /bin/sh /opt/download_crane
+
+FROM ${base_image}:${base_image_tag}
+
+COPY download-midpoint map_midpoint-docker.csv common.bash /opt/midpoint/
+
+COPY --from=0 /usr/local/bin/* /usr/local/bin
+
+RUN apk --update add --no-cache libxml2-utils curl bash ; \
+  chown root:root /usr/local/bin/* ; \
+  chmod +x /usr/local/bin/*
