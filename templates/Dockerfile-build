@@ -17,6 +17,8 @@ tar -cf midpoint-opt-\${2}.tar opt
 rm -rf opt
 EOF
 
+RUN cat /opt/download_crane /usr/local/bin/prepare_layer 
+
 RUN /bin/sh /opt/download_crane
 
 FROM ${base_image}:${base_image_tag}
