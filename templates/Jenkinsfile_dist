@@ -239,7 +239,7 @@ spec:
           break;
           fi ;
           done ;
-          if [ \${found} -eq 0 ] ; then echo "NOT Found - \\\${i} & Java version ${JAVAVER} @ \\\${s} " ; fi ;
+          if [ \\\${found} -eq 0 ] ; then echo "NOT Found - \\\${i} & Java version ${JAVAVER} @ \\\${s} " ; fi ;
           echo \".\";
           done ;
           echo ;
@@ -253,7 +253,7 @@ spec:
           /usr/local/bin/crane ls registry-\${timestamp}.lab.evolveum.com/midpoint ;
           echo ;
           /usr/local/bin/crane manifest registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} ;
-          if [ \${overallFound} -eq 0 ] ; then exit 123 ; fi ;
+          if [ \\\${overallFound} -eq 0 ] ; then exit 123 ; fi ;
       imagePullPolicy: Always 
   restartPolicy: Never
 EOF
