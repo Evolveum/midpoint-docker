@@ -1,0 +1,6 @@
+#!/bin/bash
+[ -e opt ] && exit 1
+mkdir -p opt/midpoint
+tar -xzf "${1}" -C opt/midpoint --strip-component=1
+tar -cf midpoint-opt-${2}.tar opt
+rm -rf opt

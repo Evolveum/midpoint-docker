@@ -1,0 +1,3 @@
+/bin/sh
+set -x
+wget -O - $(wget -O - https://github.com/google/go-containerregistry/releases | grep Linux_x86_64.tar.gz | grep "<a href" | sed "s/[^\"]*\"\([^\"]*\)\".*/https:\/\/github.com\1/") | tar -xvzC /usr/local/bin crane

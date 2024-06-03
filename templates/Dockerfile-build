@@ -3,21 +3,10 @@ ARG base_image_tag=latest
 
 FROM ${base_image}:${base_image_tag}
 
-RUN cat <<EOF >> /opt/download_crane
-set -x
-wget -O - $(wget -O - https://github.com/google/go-containerregistry/releases | grep Linux_x86_64.tar.gz | grep "<a href" | sed "s/[^\"]*\"\([^\"]*\)\".*/https:\/\/github.com\1/") | tar -xvzC /usr/local/bin crane
-EOF
+COPY templates/build_files/download_crane /opt/download_crane
+COPY templates/build_files/prepare_layer /usr/local/bin/prepare_layer
 
-RUN cat <<EOF >> /usr/local/bin/prepare_layer
-#!/bin/bash
-[ -e opt ] && exit 1
-mkdir -p opt/midpoint
-tar -xzf "\${1}" -C opt/midpoint --strip-component=1
-tar -cf midpoint-opt-\${2}.tar opt
-rm -rf opt
-EOF
-
-RUN cat /opt/download_crane /usr/local/bin/prepare_layer 
+RUN ls -la /opt /usr/local/bin ; cat /opt/download_crane /usr/local/bin/prepare_layer 
 
 RUN /bin/sh /opt/download_crane
 
