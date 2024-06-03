@@ -220,9 +220,9 @@ spec:
           crane ls registry.lab.evolveum.com/midpoint > image_list ;
           grep \"^template.*\${osID}\$\" image_list > image_list_filtered;
           cut -d \\- -f 2 image_list_filtered > combine_platform ;
-          echo \\\$(cat combine_platform) > combine_platform ;
+          sort combine_platform > combine_platform_sorted ;
           echo ;
-          for s in \\\$(cat combine_platform) ;
+          for s in \\\$(uniq combine_platform_sorted) ;
           do
           toProcess=\"${IMAGEOS}\" ;
           echo \"Looking for the remplate on platform \\\${s} - \\\${toProcess} \\\${toProcess%.*} \${osID}\" ;
