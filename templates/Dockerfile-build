@@ -4,9 +4,8 @@ ARG base_image_tag=latest
 FROM ${base_image}:${base_image_tag}
 
 COPY templates/build_files/download_crane /opt/download_crane
-COPY templates/build_files/prepare_layer /usr/local/bin/prepare_layer
 
-RUN ls -la /opt /usr/local/bin ; cat /opt/download_crane /usr/local/bin/prepare_layer 
+COPY templates/build_files/prepare_layer /usr/local/bin/prepare_layer
 
 RUN /bin/sh /opt/download_crane
 

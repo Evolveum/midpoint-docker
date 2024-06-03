@@ -1,3 +1,6 @@
+def repoName = params.REPOSITORY_NAME ?: 'midpoint'
+def templateReg = params.TEMPLATE_REGISTRY ?: 'registry.lab.evolveum.com'
+def finalReg = params.REGISTRY ?: 'evolveum'
 podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
     containerTemplate(
         name: "jnlp", 
@@ -197,8 +200,6 @@ curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
                     try {
                         sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
-#mkdir midpoint-docker
-#curl -s -L https://github.com/Evolveum/midpoint-docker/tarball/master | tar -xzC ${WORKSPACE}/midpoint-docker --strip-components=1
 osID=\$(echo "${IMAGEOS}" | cut -d "-" -f 1)
 osVer=\$(echo "${IMAGEOS}" | cut -d "-" -f 2)
 cat <<EOF | kubectl apply -f -
@@ -210,7 +211,7 @@ metadata:
 spec:
   containers:
     - name: docker-image-build
-      image: registry.lab.evolveum.com/midpoint:build-alpine
+      image: ${templateReg}/${repoName}:build-alpine
       command: [ "/bin/bash", "-c" ]
       args:
         - cd /opt/midpoint ;
@@ -218,7 +219,7 @@ spec:
           overallFound=0 ;
           /usr/local/bin/prepare_layer midpoint.tar.gz ${DOCKERTAG} ;
           echo -n \"/usr/local/bin/crane index append\" >combine_command ;
-          crane ls registry.lab.evolveum.com/midpoint > image_list ;
+          crane ls ${templateReg}/${repoName} > image_list ;
           grep \"^template.*\${osID}\$\" image_list > image_list_filtered;
           cut -d \\- -f 2 image_list_filtered > combine_platform ;
           sort combine_platform > combine_platform_sorted ;
@@ -233,8 +234,8 @@ spec:
           if [ \\\$(grep \"^template-\\\${s}-${JAVAVER}-\\\${i}\\\$\" image_list | wc -l) -eq 1 ] ;
           then
           echo \"Found match - Base OS \\\${i} & Java version ${JAVAVER} @ \\\${s}\" ;
-          echo -n \" -m registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i}\" >>combine_command ;
-          /usr/local/bin/crane append -b registry.lab.evolveum.com/midpoint:template-\\\${s}-${JAVAVER}-\\\${i} -f midpoint-opt-${DOCKERTAG}.tar -t registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i} ;
+          echo -n \" -m registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i}\" >>combine_command ;
+          /usr/local/bin/crane append -b ${templateReg}/${repoName}:template-\\\${s}-${JAVAVER}-\\\${i} -f midpoint-opt-${DOCKERTAG}.tar -t registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i} ;
           found=1 ; overallFound=1;
           break;
           fi ;
@@ -243,16 +244,16 @@ spec:
           echo \".\";
           done ;
           echo ;
-          echo -n \" -t registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}\" >>combine_command ;
+          echo -n \" -t registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}\" >>combine_command ;
           cat combine_command ;
           echo ;
           /bin/bash combine_command ;
           echo
           /usr/local/bin/crane catalog registry-\${timestamp}.lab.evolveum.com ;
           echo ;
-          /usr/local/bin/crane ls registry-\${timestamp}.lab.evolveum.com/midpoint ;
+          /usr/local/bin/crane ls registry-\${timestamp}.lab.evolveum.com/${repoName} ;
           echo ;
-          /usr/local/bin/crane manifest registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} ;
+          /usr/local/bin/crane manifest registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} ;
           if [ \\\${overallFound} -eq 0 ] ; then exit 123 ; fi ;
       imagePullPolicy: Always 
   restartPolicy: Never
@@ -328,7 +329,7 @@ spec:
       \${volDef}
   containers:
     - name: mp
-      image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
+      image: 'registry-\${3}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
       ports:
         - name: gui
           containerPort: 8080
@@ -732,7 +733,7 @@ spec:
       \${volDef}
   initContainers:
     - name: mp-config-init
-      image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
+      image: 'registry-\${3}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
       command: [ "/bin/bash", "-c" ]
       args:
         - cd /opt/midpoint ;
@@ -766,7 +767,7 @@ spec:
       imagePullPolicy: IfNotPresent
   containers:
     - name: mp
-      image: 'registry-\${3}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
+      image: 'registry-\${3}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
       ports:
         - name: gui
           containerPort: 8080
@@ -1187,7 +1188,7 @@ timestamp="\$(cat timestamp)"
 waitCycle=120
 
 curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
-curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/midpoint/tags/list
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list
 echo
 error=0
 while read line
@@ -1219,12 +1220,12 @@ else
         then
             if [ "\${finalTags}" != "" ]
         	then
-	            finalTags="\${finalTags} evolveum/midpoint:${DOCKERTAG}\${osSuffix}"
+	            finalTags="\${finalTags} ${finalReg}/${repoName}:${DOCKERTAG}\${osSuffix}"
 	        else
-	            finalTags="evolveum/midpoint:${DOCKERTAG}\${osSuffix}\"
+	            finalTags="${finalReg}/${repoName}:${DOCKERTAG}\${osSuffix}\"
 	        fi
-            [ "\${osSuffix}" == "-ubuntu" ] && finalTags="\${finalTags} evolveum/midpoint:${DOCKERTAG}"
-            [ "${DOCKERTAG}\${osSuffix}" == "4.0-support-alpine" ] && finalTags="\${finalTags} 4.0support-alpine"
+            [ "\${osSuffix}" == "-ubuntu" ] && finalTags="\${finalTags} ${finalReg}/${repoName}:${DOCKERTAG}"
+            [ "${DOCKERTAG}\${osSuffix}" == "4.0-support-alpine" ] && finalTags="\${finalTags} ${finalReg}/${repoName}:4.0support-alpine"
         else if [ \${#pushTag} -gt \$(echo -n "\${pushTag}" | tr -d ":" | wc -c) ]
 	      then
 		    echo "Docker tag to process : \${pushTag}"
@@ -1235,12 +1236,12 @@ else
 	            finalTags="\${pushTag}"
 	        fi
 	      else
-           	echo "Docker tag to process : evolveum/midpoint:\${pushTag}"
+           	echo "Docker tag to process : ${finalReg}/${repoName}:\${pushTag}"
         	if [ "\${finalTags}" != "" ]
         	then
-	            finalTags="\${finalTags} evolveum/midpoint:\${pushTag}"
+	            finalTags="\${finalTags} ${finalReg}/${repoName}:\${pushTag}"
 	        else
-	            finalTags="evolveum/midpoint:\${pushTag}"
+	            finalTags="${finalReg}/${repoName}:\${pushTag}"
 	        fi
 	      fi
 	    fi
@@ -1267,14 +1268,14 @@ spec:
         secretName: docker-push-\${timestamp}
   containers:
     - name: docker-image-push
-      image: registry.lab.evolveum.com/midpoint:build-alpine
+      image: ${templateReg}/${repoName}:build-alpine
       command: [ "/bin/bash", "-c" ]
       args:
         - echo \"Processing ... \${finalTags}\" ;
           echo ;
           for s in \${finalTags};
           do 
-          /usr/local/bin/crane copy registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} \\\${s};
+          /usr/local/bin/crane copy registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} \\\${s};
           echo "." ;
           done
       volumeMounts:
