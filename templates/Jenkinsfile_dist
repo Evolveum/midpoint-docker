@@ -232,14 +232,14 @@ spec:
           do
           if [ \\\$(grep \"^template-\\\${s}-${JAVAVER}-\\\${i}\\\$\" image_list | wc -l) -eq 1 ] ;
           then
-          echo \"Found match : Base OS \\\${i} & Java version ${JAVAVER} @ \\\${s}\" ;
+          echo \"Found match - Base OS \\\${i} & Java version ${JAVAVER} @ \\\${s}\" ;
           echo -n \" -m registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i}\" >>combine_command ;
           /usr/local/bin/crane append -b registry.lab.evolveum.com/midpoint:template-\\\${s}-${JAVAVER}-\\\${i} -f midpoint-opt-${DOCKERTAG}.tar -t registry-\${timestamp}.lab.evolveum.com/midpoint:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i} ;
 	  found=1 ; overallFound=1;
           break;
           fi ;
           done ;
-          if [ \${found} -eq 0 ] ; then echo "NOT Found : \\\${i} w Java ${JAVAVER} @ \\\${s} " ; fi ;
+          if [ \${found} -eq 0 ] ; then echo "NOT Found - \\\${i} w Java ${JAVAVER} @ \\\${s} " ; fi ;
           echo \".\";
           done ;
           echo ;
