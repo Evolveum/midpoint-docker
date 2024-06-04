@@ -5,6 +5,9 @@ registry="registry.lab.evolveum.com"
 base_image=alpine
 base_image_tag=latest
 JAVA_VERSION=21
+keep_template=0
+dry_run=0
+options=""
 while [ "${1:0:1}" == "-" ]
 do
 	case ${1:1} in
@@ -28,22 +31,44 @@ do
 			app="${2}"
 			shift
 			;;
+		d)
+			dry_run=${2}
+			shift
+			;;
+		k)
+			keep_template=${2}
+			shift
+			;;
 		all)
-			${0} -rockylinux
-			${0} -ubuntu
-			${0} -alpine
+			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep tempaltes : ${keep_template} | DRY RUN : ${dry_run}"
+			echo "  - - - - Rocky Linux - - - - - - - "  
+			${0} -app ${app} -k ${keep_template} -d ${dry_run} -java ${JAVA_VERSION} -rockylinux
+			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep tempaltes : ${keep_template} | DRY RUN : ${dry_run}"
+			echo "  - - - - Ubuntu - - - - - - - "  
+			${0} -app ${app} -k ${keep_template} -d ${dry_run} -java ${JAVA_VERSION} -ubuntu
+			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep tempaltes : ${keep_template} | DRY RUN : ${dry_run}"
+			echo "  - - - - Alpine - - - - - - - "  
+			${0} -app ${app} -k ${keep_template} -d ${dry_run} -java ${JAVA_VERSION} -alpine
+			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 			exit 0
 			;;
 		*)
-			echo "Please provide distribution to update..."
-			exit 0	
+			echo "Unknown parameter : ${1:0}"
 			;;	
 	esac
 	shift
 done
 image_name="localhost/${repo}:template-temp"
+if [ "${app}" == "podman" ]
+then
+	options="--format docker"
+fi
 cd .. 
-${app} build --build-arg base_image=${base_image} --build-arg base_image_tag=${base_image_tag} --build-arg JAVA_VERSION=${JAVA_VERSION} -t ${image_name} -f templates/Dockerfile-template .
+echo "..... ${app} build ${options} --build-arg base_image=${base_image} --build-arg base_image_tag=${base_image_tag} --build-arg JAVA_VERSION=${JAVA_VERSION} -t ${image_name} -f templates/Dockerfile-template ."
+${app} build ${options} --build-arg base_image=${base_image} --build-arg base_image_tag=${base_image_tag} --build-arg JAVA_VERSION=${JAVA_VERSION} -t ${image_name} -f templates/Dockerfile-template .
 exec 3>&1 1>os-release 
 ${app} run -ti --rm ${image_name} cat /etc/os-release
 exec 1>java-version
@@ -57,9 +82,20 @@ cat java-version
 echo " - - - - - - - - -"
 
 os_id="$(grep "^ID=" os-release | cut -d = -f 2 | tr -d [[:space:]]\" )"
-os_version="$(grep "^VERSION_ID=" os-release | cut -d = -f 2 | tr -d [[:space:]]\" )"
+if [ $(grep -c "^VERSION=" os-release) -eq 1 ]
+then
+	os_version="$(grep "^VERSION=" os-release | cut -d = -f 2 | cut -d \  -f 1 | tr -d [[:space:]]\" )"	
+else
+	os_version="$(grep "^VERSION_ID=" os-release | cut -d = -f 2 | cut -d \  -f 1 | tr -d [[:space:]]\" )"
+fi
 java_version="$(grep Runtime java-version | sed "s/[^0-9]*\([0-9]*\).*/\1/")"
 architecture="$(${app} inspect ${image_name} | grep Architecture | cut -d \" -f 4)"
+
+if [ "${os_id}" == "" -o "${os_version}" == "" -o "${java_version}" == "" -o "${architecture}" == "" ]
+then
+	echo "Something went wrong. I am sorry, exiting..."
+	exit 1
+fi
 
 [ "${os_id}" == "rocky" ] && os_id="rockylinux"
 
@@ -68,8 +104,8 @@ do
 	[ "${s: -1:1}" == "-" ] && continue
 	echo "${image_name} => ${registry}/${repo}:template-${architecture}-${java_version}-${s}"
 	${app} tag ${image_name} ${registry}/${repo}:template-${architecture}-${java_version}-${s}
-	${app} push ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
-	${app} rmi ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
+	[ ${dry_run} -eq 0 ] && ${app} push ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
+	[ ${keep_template} -eq 0 ] && ${app} rmi ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
 done
 
 ${app} rmi ${image_name} 

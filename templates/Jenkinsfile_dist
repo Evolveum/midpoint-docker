@@ -1187,8 +1187,12 @@ timestamp="\$(cat timestamp)"
 #In each cycle there is sleep time set to 5 seconds
 waitCycle=120
 
-curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
-curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | tee reg_catalog
+if [ \\\$(grep -c "${repoName}" reg_catalog) -eq 0 ] ; then exit 1 ; fi
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list | tee reg_list
+if [ \\\$(grep -c "build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}" ) -eq 0 ] ; then exit 1 ; fi
+
 echo
 error=0
 while read line
