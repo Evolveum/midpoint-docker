@@ -50,6 +50,12 @@ exec 1>java-version
 ${app} run -ti --rm ${image_name} java -version | tee java-version
 exec >&3 
 
+echo " - - - - - - - - -"
+cat os-release
+echo " - - - -"
+cat java-version
+echo " - - - - - - - - -"
+
 os_id="$(grep "^ID=" os-release | cut -d = -f 2 | tr -d [[:space:]]\" )"
 os_version="$(grep "^VERSION_ID=" os-release | cut -d = -f 2 | tr -d [[:space:]]\" )"
 java_version="$(grep Runtime java-version | sed "s/[^0-9]*\([0-9]*\).*/\1/")"
