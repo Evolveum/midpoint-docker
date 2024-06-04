@@ -1,0 +1,70 @@
+#!/bin/bash
+app="docker"
+repo="midpoint"
+registry="registry.lab.evolveum.com"
+base_image=alpine
+base_image_tag=latest
+JAVA_VERSION=21
+while [ "${1:0:1}" == "-" ]
+do
+	case ${1:1} in
+		alpine)
+			base_image=alpine
+			base_image_tag=latest
+			;;
+		rockylinux)
+			base_image=rockylinux
+			base_image_tag=9.3
+			;;
+		ubuntu)
+			base_image=ubuntu
+			base_image_tag=22.04
+			;;
+		java)
+			JAVA_VERSION=${2}
+			shift
+			;;
+		app)
+			app="${2}"
+			shift
+			;;
+		all)
+			${0} -rockylinux
+			${0} -ubuntu
+			${0} -alpine
+			exit 0
+			;;
+		*)
+			echo "Please provide distribution to update..."
+			exit 0	
+			;;	
+	esac
+	shift
+done
+image_name="localhost/${repo}:template-temp"
+cd .. 
+${app} build --build-arg base_image=${base_image} --build-arg base_image_tag=${base_image_tag} --build-arg JAVA_VERSION=${JAVA_VERSION} -t ${image_name} -f templates/Dockerfile-template .
+exec 3>&1 1>os-release 
+${app} run -ti --rm ${image_name} cat /etc/os-release
+exec 1>java-version
+${app} run -ti --rm ${image_name} java -version | tee java-version
+exec >&3 
+
+os_id="$(grep "^ID=" os-release | cut -d = -f 2 | tr -d [[:space:]]\" )"
+os_version="$(grep "^VERSION_ID=" os-release | cut -d = -f 2 | tr -d [[:space:]]\" )"
+java_version="$(grep Runtime java-version | sed "s/[^0-9]*\([0-9]*\).*/\1/")"
+architecture="$(${app} inspect ${image_name} | grep Architecture | cut -d \" -f 4)"
+
+[ "${os_id}" == "rocky" ] && os_id="rockylinux"
+
+for s in ${os_id} ${os_id}-${os_version} ${os_id}-${os_version%.*}
+do
+	[ "${s: -1:1}" == "-" ] && continue
+	echo "${image_name} => ${registry}/${repo}:template-${architecture}-${java_version}-${s}"
+	${app} tag ${image_name} ${registry}/${repo}:template-${architecture}-${java_version}-${s}
+	${app} push ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
+	${app} rmi ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
+done
+
+${app} rmi ${image_name} 
+rm os-release java-version
