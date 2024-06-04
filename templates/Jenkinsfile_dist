@@ -247,7 +247,7 @@ spec:
           echo -n \" -t registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}\" >>combine_command ;
           cat combine_command ;
           echo ;
-          /bin/bash combine_command ;
+          if [ \\\${overallFound} -eq 1 ] ; then /bin/bash combine_command ; fi ;
           echo
           /usr/local/bin/crane catalog registry-\${timestamp}.lab.evolveum.com ;
           echo ;
