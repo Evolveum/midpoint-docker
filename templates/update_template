@@ -41,15 +41,15 @@ do
 			;;
 		all)
 			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep tempaltes : ${keep_template} | DRY RUN : ${dry_run}"
+			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep templates : ${keep_template} | DRY RUN : ${dry_run}"
 			echo "  - - - - Rocky Linux - - - - - - - "  
 			${0} -app ${app} -k ${keep_template} -d ${dry_run} -java ${JAVA_VERSION} -rockylinux
 			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep tempaltes : ${keep_template} | DRY RUN : ${dry_run}"
+			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep templates : ${keep_template} | DRY RUN : ${dry_run}"
 			echo "  - - - - Ubuntu - - - - - - - "  
 			${0} -app ${app} -k ${keep_template} -d ${dry_run} -java ${JAVA_VERSION} -ubuntu
 			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep tempaltes : ${keep_template} | DRY RUN : ${dry_run}"
+			echo " APP: ${app} | JAVA: ${JAVA_VERSION} | keep templates : ${keep_template} | DRY RUN : ${dry_run}"
 			echo "  - - - - Alpine - - - - - - - "  
 			${0} -app ${app} -k ${keep_template} -d ${dry_run} -java ${JAVA_VERSION} -alpine
 			echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
