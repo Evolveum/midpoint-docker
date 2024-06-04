@@ -1191,7 +1191,7 @@ curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | tee reg_ca
 if [ \$(grep -c "${repoName}" reg_catalog) -eq 0 ] ; then exit 1 ; fi
 
 curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list | tee reg_list
-if [ \$(grep -c "build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}" ) -eq 0 ] ; then exit 1 ; fi
+if [ \$(grep -c "build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}" reg_list ) -eq 0 ] ; then exit 1 ; fi
 
 echo
 error=0
