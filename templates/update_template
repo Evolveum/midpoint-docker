@@ -108,14 +108,22 @@ fi
 
 [ "${os_id}" == "rocky" ] && os_id="rockylinux"
 
+processed="OS: ${os_id}\nOS Version: ${os_version}\n\nProcessed:\n"
+
 for s in ${os_id} ${os_id}-${os_version} ${os_id}-${os_version%.*}
 do
+	echo "Evaluating: ${s}"
 	[ "${s: -1:1}" == "-" ] && continue
 	echo "${image_name} => ${registry}/${repo}:template-${architecture}-${java_version}-${s}"
 	${app} tag ${image_name} ${registry}/${repo}:template-${architecture}-${java_version}-${s}
 	[ ${dry_run} -eq 0 ] && ${app} push ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
-	[ ${keep_template} -eq 0 ] && ${app} rmi ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
+	[ ${keep_template} -eq 0 ] && ${app} rmi ${registry}/${repo}:template-${architecture}-${java_version}-${s}
+        processed="${processed}${registry}/${repo}:template-${architecture}-${java_version}-${s}\n"
 done
+
+echo " - - - - - - - - - - -"
+echo -e "${processed}"
+echo " - - - - - - - - - - -"
 
 ${app} rmi ${image_name} 
 rm os-release-${timestamp} java-version-${timestamp}
