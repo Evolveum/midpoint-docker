@@ -24,21 +24,21 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
           }
           stage("Alpine") {
             if ( "${IMAGEOS}" == "alpine" || "${IMAGEOS}" == "all" ) {
-              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -alpine"  
+              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -alpine"
             } else {
               echo "Ubuntu is not required..."
             }
           }
           stage("Ubuntu") {
             if ( "${IMAGEOS}" == "ubuntu" || "${IMAGEOS}" == "all" ) {
-              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -ubuntu"  
+              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -ubuntu"
             } else {
               echo "Ubuntu is not required..."
             }
           }
-         stage("Rocky Linux") {
+          stage("Rocky Linux") {
             if ( "${IMAGEOS}" == "rockylinux" || "${IMAGEOS}" == "all" ) {
-              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -rockylinux"  
+              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -rockylinux"
             } else {
               echo "Ubuntu is not required..."
             }
