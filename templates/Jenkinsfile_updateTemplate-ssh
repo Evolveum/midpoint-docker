@@ -20,7 +20,7 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
           remote.user = userName
           remote.identityFile = identity
           stage("update env") {
-            sshCommand remote: remote, command: "cd ~ ; if [ ! -e repo ] ; then mkdir repo ; fi ; cd repo; if [ -e midpoint-docker ] ; then cd midpoint-docker ; if [ \$(( \$(date +%s) - \$(stat -c %Z .git/FETCH_HEAD ) )) -lt 900 ] ; then git pull ; else echo \"Last fetch has been less then 900s.\" ; fi ; else git clone https://github.com/Evolveum/midpoint-docker.git; fi"
+            sshCommand remote: remote, command: "cd ~ ; if [ ! -e repo ] ; then mkdir repo ; fi ; cd repo; if [ -e midpoint-docker ] ; then cd midpoint-docker ; if [ \$(( \$(date +%s) - \$(stat -c %Z .git/objects ) )) -lt 900 ] ; then git pull ; else echo \"Last fetch has been less then 900s ago.\" ; fi ; else git clone https://github.com/Evolveum/midpoint-docker.git; fi"
           }
           stage("Alpine") {
             if ( "${IMAGEOS}" == "alpine" || "${IMAGEOS}" == "all" ) {

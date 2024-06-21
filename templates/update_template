@@ -27,6 +27,14 @@ do
 			JAVA_VERSION=${2}
 			shift
 			;;
+		baseImg)
+			base_image="${2}"
+			shift
+			;;
+		baseImgTag)
+			base_image_tag="${2}"
+			shift
+			;;
 		app)
 			app="${2}"
 			shift
