@@ -108,7 +108,7 @@ fi
 
 [ "${os_id}" == "rocky" ] && os_id="rockylinux"
 
-processed="OS: ${os_id}\nOS Version: ${os_version}\n\nProcessed:\n"
+processed="OS: ${os_id}\nOS Version: ${os_version}\nJava: ${java_version}\nArch: ${architecture}\n\nProcessed:\n"
 
 for s in ${os_id} ${os_id}-${os_version} ${os_id}-${os_version%.*}
 do
