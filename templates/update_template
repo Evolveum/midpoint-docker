@@ -79,9 +79,9 @@ cd ..
 echo "..... ${app} build ${options} --build-arg base_image=${base_image} --build-arg base_image_tag=${base_image_tag} --build-arg JAVA_VERSION=${JAVA_VERSION} -t ${image_name} -f templates/Dockerfile-template ."
 ${app} build ${options} --build-arg base_image=${base_image} --build-arg base_image_tag=${base_image_tag} --build-arg JAVA_VERSION=${JAVA_VERSION} -t ${image_name} -f templates/Dockerfile-template .
 exec 3>&1 1>os-release-${timestamp}
-${app} run -ti --rm ${image_name} cat /etc/os-release-${timestamp}
+${app} run -ti --rm ${image_name} cat /etc/os-release
 exec 1>java-version-${timestamp}
-${app} run -ti --rm ${image_name} java -version | tee java-version-${timestamp}
+${app} run -ti --rm ${image_name} java -version
 exec >&3 
 
 echo " - - - - - - - - -"
