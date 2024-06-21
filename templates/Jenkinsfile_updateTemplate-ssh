@@ -1,0 +1,48 @@
+def remote = [:]
+remote.name = "RPi"
+remote.host = "10.100.1.3"
+remote.allowAnyHosts = true
+remote.pty = true
+
+podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
+    containerTemplate(
+        name: "jnlp", 
+        image: "jenkins/inbound-agent:4.13-2-alpine-jdk11", 
+        runAsUser: '0', 
+        resourceLimitCpu: '900m', 
+        resourceLimitMemory: '1Gi', 
+        resourceRequestCpu: '900m', 
+        resourceRequestMemory: '1Gi'
+    ),
+  ]) {
+    node(POD_LABEL) {
+        withCredentials([sshUserPrivateKey(credentialsId: 'RPi', keyFileVariable: 'identity', usernameVariable: 'userName')]) {
+          remote.user = userName
+          remote.identityFile = identity
+          stage("update env") {
+            sshCommand remote: remote, command: "cd ~ ; if [ ! -e repo ] ; then mkdir repo ; fi ; cd repo; if [ -e midpoint-docker ] ; then cd midpoint-docker ; if [ \$(( \$(date +%s) - \$(stat -c %Z .git/FETCH_HEAD ) )) -lt 900 ] ; then git pull ; else echo \"Last fetch has been less then 900s.\" ; fi ; else git clone https://github.com/Evolveum/midpoint-docker.git; fi"
+          }
+          stage("Ubuntu") {
+            if ( "${IMAGEOS}" == "ubuntu" || "${IMAGEOS}" == "all" ) {
+              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -ubuntu"  
+            } else {
+              echo "Ubuntu is not required..."
+            }
+          }
+          stage("Alpine") {
+            if ( "${IMAGEOS}" == "alpine" || "${IMAGEOS}" == "all" ) {
+              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -alpine"  
+            } else {
+              echo "Ubuntu is not required..."
+            }
+          }
+          stage("Rocky Linux") {
+            if ( "${IMAGEOS}" == "rockylinux" || "${IMAGEOS}" == "all" ) {
+              sshCommand remote: remote, command: "cd ~/repo/midpoint-docker/templates ; ./update_template -java ${JAVAVER} -rockylinux"  
+            } else {
+              echo "Ubuntu is not required..."
+            }
+          }
+        }
+    }
+}
