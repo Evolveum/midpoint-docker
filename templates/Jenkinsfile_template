@@ -1,0 +1,891 @@
+def repoName = params.REPOSITORY_NAME ?: 'midpoint'
+def templateReg = params.TEMPLATE_REGISTRY ?: 'registry.lab.evolveum.com'
+def reqArch = params.ARCH ?: 'amd64'
+podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
+    containerTemplate(
+        name: "jnlp", 
+        image: "jenkins/inbound-agent:4.13-2-alpine-jdk11", 
+        runAsUser: '0', 
+        resourceLimitCpu: '900m', 
+        resourceLimitMemory: '1Gi', 
+        resourceRequestCpu: '900m', 
+        resourceRequestMemory: '1Gi'
+    ),
+    containerTemplate(
+        name: "kubectl",
+        image: "bitnami/kubectl:1.19.4",
+        command: 'cat',
+        runAsUser: '0',
+        ttyEnabled: true,
+    ),
+  ]) {
+    node(POD_LABEL) {
+        stage ("create environment") {
+            container ("kubectl") {
+                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
+                        serverUrl: 'https://10.100.1.42:6443',
+                        contextName: 'jenkins',
+                        clusterName: 'kubernetes',
+                        namespace: 'jenkins'
+                        ]) {
+                    try {
+                        sh """#!/bin/bash
+#timestamp="\$(date +%s)-${JOB_NAME}-${BUILD_NUMBER}"
+timestamp="${JOB_NAME}-${BUILD_NUMBER}"
+echo \${timestamp} >timestamp
+mkdir logs-\${timestamp}
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-reg-\${timestamp}
+  namespace: jenkins
+spec:
+  ports:
+    - name: registry
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+  selector:
+    app: docker-reg-\${timestamp}
+  type: ClusterIP
+  sessionAffinity: None
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: docker-registry-\${timestamp}
+  namespace: jenkins
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+spec:
+  tls:
+    - hosts:
+        - registry-\${timestamp}.lab.evolveum.com
+      secretName: cert-lab-evolveum
+  rules:
+    - host: registry-\${timestamp}.lab.evolveum.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: docker-reg-\${timestamp}
+                port:
+                  number: 5000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docker-reg-\${timestamp}-config
+  namespace: jenkins
+data:
+  config.yml: |-
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
+    http:
+      addr: :5000
+      headers:
+        X-Content-Type-Options:
+        - nosniff
+    log:
+      fields:
+        service: registry
+    storage:
+      delete:
+        enabled: true
+      cache:
+        blobdescriptor: inmemory
+    version: 0.1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: docker-reg-\${timestamp}-secret
+  namespace: jenkins
+data:
+  haSharedSecret: Z2d5bnBzUWdwcXFWOXB2dw==
+type: Opaque
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: docker-reg-\${timestamp}
+  namespace: jenkins
+  labels:
+    app: docker-reg-\${timestamp}
+spec:
+  volumes:
+    - name: data
+      emptyDir: {}
+    - name: docker-reg-\${timestamp}-config
+      configMap:
+        name: docker-reg-\${timestamp}-config
+        defaultMode: 420
+  containers:
+    - name: docker-registry
+      image: registry:2.8.1
+      command:
+        - /bin/registry
+        - serve
+        - /etc/docker/registry/config.yml
+      ports:
+        - containerPort: 5000
+          protocol: TCP
+      env:
+        - name: REGISTRY_HTTP_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: docker-reg-\${timestamp}-secret
+              key: haSharedSecret
+        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+          value: /var/lib/registry
+      volumeMounts:
+        - name: data
+          mountPath: /var/lib/registry/
+        - name: docker-reg-\${timestamp}-config
+          mountPath: /etc/docker/registry
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 5000
+          scheme: HTTP
+        timeoutSeconds: 1
+        periodSeconds: 10
+        successThreshold: 1
+        failureThreshold: 3
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 5000
+          scheme: HTTP
+        timeoutSeconds: 1
+        periodSeconds: 10
+        successThreshold: 1
+        failureThreshold: 3
+      imagePullPolicy: IfNotPresent
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
+EOF
+echo "Waiting to get registry ready..."
+http=\$(curl -I -L -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | head -n 1 | cut -d " " -f 2 )
+while [ \${http} -eq 404 -o \${http} -eq 503 ]
+do
+    sleep 2
+    http=\$(curl -I -L -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | head -n 1 | cut -d " " -f 2 )
+done
+echo "Registry is ready... (\${http})"
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
+                        """
+                    } catch (err) {
+                        echo "Caught: ${err}"
+                        unstable 'Error during envvironment initialization'
+                    }
+                }
+            }
+        }
+        stage ("Alpine") {
+            if ( "${IMAGEOS}" == "alpine" || "${IMAGEOS}" == "all" )
+            {
+            container ("kubectl") {
+                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
+                        serverUrl: 'https://10.100.1.42:6443',
+                        contextName: 'jenkins',
+                        clusterName: 'kubernetes',
+                        namespace: 'jenkins'
+                        ]) {
+                    try {
+                        sh """#!/bin/bash
+timestamp="\$(cat timestamp)"
+imageOS="alpine"
+imageOStag="latest"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-\${timestamp}
+  namespace: jenkins
+spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - "--dockerfile=templates/Dockerfile-template"
+        - "--context=git://github.com/Evolveum/midpoint-docker.git#refs/heads/master"
+        - "--destination=registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}"
+        - --build-arg
+        - base_image=\${imageOS}
+        - --build-arg
+        - base_image_tag=\${imageOStag}
+        - --build-arg
+        - JAVA_VERSION=${JAVA_VERSION}
+  restartPolicy: Never
+EOF
+echo "Waiting to finish the process of the image build..."
+status=\$(kubectl get -n jenkins pod/kaniko-\${timestamp} -o=jsonpath="{.status.phase}")
+while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+do
+    sleep 15
+    status=\$(kubectl get -n jenkins pod/kaniko-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins kaniko-\${timestamp} | wc -l) lines..."
+done
+echo " - - - - - - - -"
+kubectl logs -n jenkins kaniko-\${timestamp} > logs-\${timestamp}/\${imageOS}-kaniko-build.log 
+kubectl delete -n jenkins pod/kaniko-\${timestamp}
+
+cat <<EOF | kubectl apply -f - | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: template-${reqArch}-\${imageOS}-\${timestamp}
+  namespace: jenkins
+  labels:
+    type: test
+spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
+  containers:
+    - name: test
+      image: 'registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}'
+      command: [ "/bin/bash", "-c" ]
+      args:
+        - echo \" . . . . OS  . . .\" ;
+          cat /etc/os-release ;
+          echo ;
+          echo \" . . . Java . . .\" ;
+          java -version ;
+      imagePullPolicy: Always
+  restartPolicy: Never
+EOF
+
+echo "Waiting to finish the process of the image test..."
+status=\$(kubectl get -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+do
+    sleep 15
+    status=\$(kubectl get -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins template-${reqArch}-\${imageOS}-\${timestamp} | wc -l) lines..."
+done
+echo " - - - - - - - - - -"
+kubectl logs -n jenkins template-${reqArch}-\${imageOS}-\${timestamp} | tee logs-\${timestamp}/\${imageOS}-template-${reqArch}.log
+echo " - - - - - - - -"
+kubectl delete -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp}
+
+os_id="\$(grep "^ID=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | tr -d [[:space:]]\\" )"
+if [ \$(grep -c "^VERSION=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log) -eq 1 ]
+then
+        os_version="\$(grep "^VERSION=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | cut -d \\  -f 1 | tr -d [[:space:]]\\" )"
+else
+        os_version="\$(grep "^VERSION_ID=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | cut -d \\  -f 1 | tr -d [[:space:]]\\" )"
+fi
+java_version="\$(grep Runtime logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | sed "s/[^0-9]*\\([0-9]*\\).*/\\1/")"
+
+if [ "\${os_id}" == "" -o "\${os_version}" == "" -o "\${java_version}" == "" ]
+then
+        echo "Something went wrong. I am sorry, exiting..."
+        exit 1
+fi
+
+processed="OS: \${os_id}\\nOS Version: \${os_version}\\nJava: \${java_version}\\nArch: ${reqArch}\\n\\nProcessed:\\n"
+
+cat <<EOF > push_def.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-push-\${imageOS}-\${timestamp}
+  namespace: jenkins
+  labels:
+    app: kaniko-push-\${imageOS}-\${timestamp}
+    type: push
+spec:
+  volumes:
+    - name: data
+      emptyDir: {}
+  initContainers:
+    - name: kaniko-init
+      image: 'alpine:latest'
+      command: ["/bin/sh","-c"]
+      args: ["nc -l -p 10123 | tee /opt/workspace/Dockerfile"]
+      volumeMounts:
+        - name: data
+          mountPath: /opt/workspace
+          subPath: workspace
+      imagePullPolicy: IfNotPresent
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - "--dockerfile=Dockerfile"
+        - "--context=dir:///workspace"
+EOF
+
+destImage=""
+
+for s in \${os_id} \${os_id}-\${os_version} \${os_id}-\${os_version%.*}
+do
+        echo "Evaluating: \${s}"
+        if [ "\${s: -1:1}" == "-" ] ; then continue ; fi
+        destImage="exists"
+	echo "        - \"--destination=${templateReg}/${repoName}:template-${reqArch}-\${java_version}-\${s}\"" >> push_def.yml
+        processed="\${processed}${templateReg}/${repoName}:template-${reqArch}-\${java_version}-\${s}\\n"
+done
+
+#In each cycle there is sleep time set to 5 seconds
+waitCycle=120
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | tee reg_catalog
+if [ \$(grep -c "${repoName}" reg_catalog) -eq 0 ] ; then exit 1 ; fi
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list | tee reg_list
+if [ \$(grep -c "template-${reqArch}-\${imageOS}-\${timestamp}" reg_list ) -eq 0 ] ; then exit 1 ; fi
+
+if [ "\${destImage}" == "" ] ; then exit 1; fi
+
+echo
+
+cat <<EOF >> push_def.yml
+      volumeMounts:
+        - name: data
+          mountPath: /workspace
+          subPath: workspace
+  restartPolicy: Never
+EOF
+kubectl apply -f push_def.yml | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+    
+    podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    while [ "\${podIPs:0:1}" == ":" ]
+    do
+        sleep 5
+        podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    done
+    podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
+
+    echo "Pushing Dockerfile to the pod ..."
+    ret=1
+    iteration=0
+    while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
+    do
+        sleep 5
+        cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
+FROM registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}
+EOF
+    	ret=\$?
+    	iteration=\$(( \${iteration} + 1 ))
+    done
+    [ \${ret} -eq 0 ] && echo "Dockerfile has been pushed..."
+
+    status=\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+    do
+        sleep 15
+        status=\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    done
+    echo "Downloading the log..."
+    kubectl logs -n jenkins kaniko-push-\${imageOS}-\${timestamp} -c kaniko-init > logs-\${timestamp}/\${imageOS}-kaniko-push-init.log
+    kubectl logs -n jenkins kaniko-push-\${imageOS}-\${timestamp} -c kaniko | tee logs-\${timestamp}/\${imageOS}-kaniko-push.log | grep "Applying\\|ush"
+    kubectl delete -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp}
+
+echo " - - - - - - - - - - -"
+echo -e "\${processed}"
+echo " - - - - - - - - - - -"
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list
+                        """
+                } catch (err) {
+                    echo "Caught: ${err}"
+                    unstable 'Error during processing...'
+                }
+            }
+            
+         }
+        } else {
+        	echo "This stage is not required..."
+        }
+        }
+        stage ("Ubuntu") {
+            if ( "${IMAGEOS}" == "ubuntu" || "${IMAGEOS}" == "all" )
+            {
+            container ("kubectl") {
+                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
+                        serverUrl: 'https://10.100.1.42:6443',
+                        contextName: 'jenkins',
+                        clusterName: 'kubernetes',
+                        namespace: 'jenkins'
+                        ]) {
+                    try {
+                        sh """#!/bin/bash
+timestamp="\$(cat timestamp)"
+imageOS="ubuntu"
+imageOStag="22.04"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-\${timestamp}
+  namespace: jenkins
+spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - "--dockerfile=templates/Dockerfile-template"
+        - "--context=git://github.com/Evolveum/midpoint-docker.git#refs/heads/master"
+        - "--destination=registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}"
+        - --build-arg
+        - base_image=\${imageOS}
+        - --build-arg
+        - base_image_tag=\${imageOStag}
+        - --build-arg
+        - JAVA_VERSION=${JAVA_VERSION}
+  restartPolicy: Never
+EOF
+echo "Waiting to finish the process of the image build..."
+status=\$(kubectl get -n jenkins pod/kaniko-\${timestamp} -o=jsonpath="{.status.phase}")
+while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+do
+    sleep 15
+    status=\$(kubectl get -n jenkins pod/kaniko-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins kaniko-\${timestamp} | wc -l) lines..."
+done
+echo " - - - - - - - -"
+kubectl logs -n jenkins kaniko-\${timestamp} > logs-\${timestamp}/\${imageOS}-kaniko-build.log 
+kubectl delete -n jenkins pod/kaniko-\${timestamp}
+
+cat <<EOF | kubectl apply -f - | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: template-${reqArch}-\${imageOS}-\${timestamp}
+  namespace: jenkins
+  labels:
+    type: test
+spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
+  containers:
+    - name: test
+      image: 'registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}'
+      command: [ "/bin/bash", "-c" ]
+      args:
+        - echo \" . . . . OS  . . .\" ;
+          cat /etc/os-release ;
+          echo ;
+          echo \" . . . Java . . .\" ;
+          java -version ;
+      imagePullPolicy: Always
+  restartPolicy: Never
+EOF
+
+echo "Waiting to finish the process of the image test..."
+status=\$(kubectl get -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+do
+    sleep 15
+    status=\$(kubectl get -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins template-${reqArch}-\${imageOS}-\${timestamp} | wc -l) lines..."
+done
+echo " - - - - - - - - - -"
+kubectl logs -n jenkins template-${reqArch}-\${imageOS}-\${timestamp} | tee logs-\${timestamp}/\${imageOS}-template-${reqArch}.log
+echo " - - - - - - - -"
+kubectl delete -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp}
+
+os_id="\$(grep "^ID=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | tr -d [[:space:]]\\" )"
+if [ \$(grep -c "^VERSION=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log) -eq 1 ]
+then
+        os_version="\$(grep "^VERSION=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | cut -d \\  -f 1 | tr -d [[:space:]]\\" )"
+else
+        os_version="\$(grep "^VERSION_ID=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | cut -d \\  -f 1 | tr -d [[:space:]]\\" )"
+fi
+java_version="\$(grep Runtime logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | sed "s/[^0-9]*\\([0-9]*\\).*/\\1/")"
+
+if [ "\${os_id}" == "" -o "\${os_version}" == "" -o "\${java_version}" == "" ]
+then
+        echo "Something went wrong. I am sorry, exiting..."
+        exit 1
+fi
+
+processed="OS: \${os_id}\\nOS Version: \${os_version}\\nJava: \${java_version}\\nArch: ${reqArch}\\n\\nProcessed:\\n"
+
+cat <<EOF > push_def.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-push-\${imageOS}-\${timestamp}
+  namespace: jenkins
+  labels:
+    app: kaniko-push-\${imageOS}-\${timestamp}
+    type: push
+spec:
+  volumes:
+    - name: data
+      emptyDir: {}
+  initContainers:
+    - name: kaniko-init
+      image: 'alpine:latest'
+      command: ["/bin/sh","-c"]
+      args: ["nc -l -p 10123 | tee /opt/workspace/Dockerfile"]
+      volumeMounts:
+        - name: data
+          mountPath: /opt/workspace
+          subPath: workspace
+      imagePullPolicy: IfNotPresent
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - "--dockerfile=Dockerfile"
+        - "--context=dir:///workspace"
+EOF
+
+destImage=""
+
+for s in \${os_id} \${os_id}-\${os_version} \${os_id}-\${os_version%.*}
+do
+        echo "Evaluating: \${s}"
+        if [ "\${s: -1:1}" == "-" ] ; then continue ; fi
+        destImage="exists"
+	echo "        - \"--destination=${templateReg}/${repoName}:template-${reqArch}-\${java_version}-\${s}\"" >> push_def.yml
+        processed="\${processed}${templateReg}/${repoName}:template-${reqArch}-\${java_version}-\${s}\\n"
+done
+
+#In each cycle there is sleep time set to 5 seconds
+waitCycle=120
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | tee reg_catalog
+if [ \$(grep -c "${repoName}" reg_catalog) -eq 0 ] ; then exit 1 ; fi
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list | tee reg_list
+if [ \$(grep -c "template-${reqArch}-\${imageOS}-\${timestamp}" reg_list ) -eq 0 ] ; then exit 1 ; fi
+
+if [ "\${destImage}" == "" ] ; then exit 1; fi
+
+echo
+
+cat <<EOF >> push_def.yml
+      volumeMounts:
+        - name: data
+          mountPath: /workspace
+          subPath: workspace
+  restartPolicy: Never
+EOF
+kubectl apply -f push_def.yml | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+    
+    podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    while [ "\${podIPs:0:1}" == ":" ]
+    do
+        sleep 5
+        podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    done
+    podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
+
+    echo "Pushing Dockerfile to the pod ..."
+    ret=1
+    iteration=0
+    while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
+    do
+        sleep 5
+        cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
+FROM registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}
+EOF
+    	ret=\$?
+    	iteration=\$(( \${iteration} + 1 ))
+    done
+    [ \${ret} -eq 0 ] && echo "Dockerfile has been pushed..."
+
+    status=\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+    do
+        sleep 15
+        status=\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    done
+    echo "Downloading the log..."
+    kubectl logs -n jenkins kaniko-push-\${imageOS}-\${timestamp} -c kaniko-init > logs-\${timestamp}/\${imageOS}-kaniko-push-init.log
+    kubectl logs -n jenkins kaniko-push-\${imageOS}-\${timestamp} -c kaniko | tee logs-\${timestamp}/\${imageOS}-kaniko-push.log | grep "Applying\\|ush"
+    kubectl delete -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp}
+
+echo " - - - - - - - - - - -"
+echo -e "\${processed}"
+echo " - - - - - - - - - - -"
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list
+                        """
+                } catch (err) {
+                    echo "Caught: ${err}"
+                    unstable 'Error during processing...'
+                }
+            }
+        }
+        } else {
+        	echo "This stage is not required..."
+        }
+        }
+        stage ("Rocky linux") {
+            if ( "${IMAGEOS}" == "rockylinux" || "${IMAGEOS}" == "all" )
+            {
+
+            container ("kubectl") {
+                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
+                        serverUrl: 'https://10.100.1.42:6443',
+                        contextName: 'jenkins',
+                        clusterName: 'kubernetes',
+                        namespace: 'jenkins'
+                        ]) {
+                    try {
+                        sh """#!/bin/bash
+timestamp="\$(cat timestamp)"
+imageOS="rockylinux"
+imageOStag="9.3"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-\${timestamp}
+  namespace: jenkins
+spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - "--dockerfile=templates/Dockerfile-template"
+        - "--context=git://github.com/Evolveum/midpoint-docker.git#refs/heads/master"
+        - "--destination=registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}"
+        - --build-arg
+        - base_image=\${imageOS}
+        - --build-arg
+        - base_image_tag=\${imageOStag}
+        - --build-arg
+        - JAVA_VERSION=${JAVA_VERSION}
+  restartPolicy: Never
+EOF
+echo "Waiting to finish the process of the image build..."
+status=\$(kubectl get -n jenkins pod/kaniko-\${timestamp} -o=jsonpath="{.status.phase}")
+while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+do
+    sleep 15
+    status=\$(kubectl get -n jenkins pod/kaniko-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins kaniko-\${timestamp} | wc -l) lines..."
+done
+echo " - - - - - - - -"
+kubectl logs -n jenkins kaniko-\${timestamp} > logs-\${timestamp}/\${imageOS}-kaniko-build.log 
+kubectl delete -n jenkins pod/kaniko-\${timestamp}
+
+cat <<EOF | kubectl apply -f - | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: template-${reqArch}-\${imageOS}-\${timestamp}
+  namespace: jenkins
+  labels:
+    type: test
+spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
+  containers:
+    - name: test
+      image: 'registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}'
+      command: [ "/bin/bash", "-c" ]
+      args:
+        - echo \" . . . . OS  . . .\" ;
+          cat /etc/os-release ;
+          echo ;
+          echo \" . . .  Java . . .\" ;
+          java -version ;
+      imagePullPolicy: Always
+  restartPolicy: Never
+EOF
+
+echo "Waiting to finish the process of the image test..."
+status=\$(kubectl get -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+do
+    sleep 15
+    status=\$(kubectl get -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins template-${reqArch}-\${imageOS}-\${timestamp} | wc -l) lines..."
+done
+echo " - - - - - - - - - -"
+kubectl logs -n jenkins template-${reqArch}-\${imageOS}-\${timestamp} | tee logs-\${timestamp}/\${imageOS}-template-${reqArch}.log
+echo " - - - - - - - -"
+kubectl delete -n jenkins pod/template-${reqArch}-\${imageOS}-\${timestamp}
+
+os_id="\$(grep "^ID=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | tr -d [[:space:]]\\" )"
+if [ \$(grep -c "^VERSION=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log) -eq 1 ]
+then
+        os_version="\$(grep "^VERSION=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | cut -d \\  -f 1 | tr -d [[:space:]]\\" )"
+else
+        os_version="\$(grep "^VERSION_ID=" logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | cut -d = -f 2 | cut -d \\  -f 1 | tr -d [[:space:]]\\" )"
+fi
+java_version="\$(grep Runtime logs-\${timestamp}/\${imageOS}-template-${reqArch}.log | sed "s/[^0-9]*\\([0-9]*\\).*/\\1/")"
+
+if [ "\${os_id}" == "" -o "\${os_version}" == "" -o "\${java_version}" == "" ]
+then
+        echo "Something went wrong. I am sorry, exiting..."
+        exit 1
+fi
+
+if [ "\${os_id}" == "rocky" ]
+then
+	os_id="rockylinux"
+fi
+
+processed="OS: \${os_id}\\nOS Version: \${os_version}\\nJava: \${java_version}\\nArch: ${reqArch}\\n\\nProcessed:\\n"
+
+cat <<EOF > push_def.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-push-\${imageOS}-\${timestamp}
+  namespace: jenkins
+  labels:
+    app: kaniko-push-\${imageOS}-\${timestamp}
+    type: push
+spec:
+  volumes:
+    - name: data
+      emptyDir: {}
+  initContainers:
+    - name: kaniko-init
+      image: 'alpine:latest'
+      command: ["/bin/sh","-c"]
+      args: ["nc -l -p 10123 | tee /opt/workspace/Dockerfile"]
+      volumeMounts:
+        - name: data
+          mountPath: /opt/workspace
+          subPath: workspace
+      imagePullPolicy: IfNotPresent
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - "--dockerfile=Dockerfile"
+        - "--context=dir:///workspace"
+EOF
+
+destImage=""
+
+for s in \${os_id} \${os_id}-\${os_version} \${os_id}-\${os_version%.*}
+do
+        echo "Evaluating: \${s}"
+        if [ "\${s: -1:1}" == "-" ] ; then continue ; fi
+        destImage="exists"
+	echo "        - \"--destination=${templateReg}/${repoName}:template-${reqArch}-\${java_version}-\${s}\"" >> push_def.yml
+        processed="\${processed}${templateReg}/${repoName}:template-${reqArch}-\${java_version}-\${s}\\n"
+done
+
+#In each cycle there is sleep time set to 5 seconds
+waitCycle=120
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | tee reg_catalog
+if [ \$(grep -c "${repoName}" reg_catalog) -eq 0 ] ; then exit 1 ; fi
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list | tee reg_list
+if [ \$(grep -c "template-${reqArch}-\${imageOS}-\${timestamp}" reg_list ) -eq 0 ] ; then exit 1 ; fi
+
+if [ "\${destImage}" == "" ] ; then exit 1; fi
+
+echo
+
+cat <<EOF >> push_def.yml
+      volumeMounts:
+        - name: data
+          mountPath: /workspace
+          subPath: workspace
+  restartPolicy: Never
+EOF
+kubectl apply -f push_def.yml | grep created | sed "s|\\([^[:space:]]*\\) created|\\1|"
+    
+    podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    while [ "\${podIPs:0:1}" == ":" ]
+    do
+        sleep 5
+        podIPs="\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    done
+    podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
+
+    echo "Pushing Dockerfile to the pod ..."
+    ret=1
+    iteration=0
+    while [ \${ret} -eq 1 -a \${iteration} -lt \${waitCycle} ] 
+    do
+        sleep 5
+        cat <<EOF 2>/dev/null >/dev/tcp/\${podIP}/10123
+FROM registry-\${timestamp}.lab.evolveum.com/${repoName}:template-${reqArch}-\${imageOS}-\${timestamp}
+EOF
+    	ret=\$?
+    	iteration=\$(( \${iteration} + 1 ))
+    done
+    [ \${ret} -eq 0 ] && echo "Dockerfile has been pushed..."
+
+    status=\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
+    do
+        sleep 15
+        status=\$(kubectl get -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp} -o=jsonpath="{.status.phase}")
+    done
+    echo "Downloading the log..."
+    kubectl logs -n jenkins kaniko-push-\${imageOS}-\${timestamp} -c kaniko-init > logs-\${timestamp}/\${imageOS}-kaniko-push-init.log
+    kubectl logs -n jenkins kaniko-push-\${imageOS}-\${timestamp} -c kaniko | tee logs-\${timestamp}/\${imageOS}-kaniko-push.log | grep "Applying\\|ush"
+    kubectl delete -n jenkins pod/kaniko-push-\${imageOS}-\${timestamp}
+
+echo " - - - - - - - - - - -"
+echo -e "\${processed}"
+echo " - - - - - - - - - - -"
+
+curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list
+                        """
+                } catch (err) {
+                    echo "Caught: ${err}"
+                    unstable 'Error during processing...'
+                }
+            }
+        }
+        } else {
+        	echo "This stage is not required..."
+        }
+        }
+         stage ("cleanup environment") {
+            container ("kubectl") {
+                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
+                        serverUrl: 'https://10.100.1.42:6443',
+                        contextName: 'jenkins',
+                        clusterName: 'kubernetes',
+                        namespace: 'jenkins'
+                        ]) {
+                    try {
+                        sh """#!/bin/bash
+timestamp="\$(cat timestamp)"
+
+kubectl delete -n jenkins \\
+    ingress.networking.k8s.io/docker-registry-\${timestamp} \\
+    service/docker-reg-\${timestamp} \\
+    pod/docker-reg-\${timestamp} \\
+    configmap/docker-reg-\${timestamp}-config \\
+    secret/docker-reg-\${timestamp}-secret
+    
+echo "Preparing the archive with the logs..."
+tar -cvzf logs.tgz logs-\${timestamp}
+
+                    """
+                    } catch (err) {
+                        echo "Caught: ${err}"
+                    }
+                }
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'logs.tgz', followSymlinks: false                
+            }
+        }
+    }
+}
+
