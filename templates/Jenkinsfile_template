@@ -306,6 +306,8 @@ metadata:
     app: kaniko-push-\${imageOS}-\${timestamp}
     type: push
 spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
   volumes:
     - name: data
       emptyDir: {}
@@ -527,6 +529,8 @@ metadata:
     app: kaniko-push-\${imageOS}-\${timestamp}
     type: push
 spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
   volumes:
     - name: data
       emptyDir: {}
@@ -753,6 +757,8 @@ metadata:
     app: kaniko-push-\${imageOS}-\${timestamp}
     type: push
 spec:
+  nodeSelector:
+    kubernetes.io/arch: ${reqArch}
   volumes:
     - name: data
       emptyDir: {}
