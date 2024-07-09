@@ -446,7 +446,7 @@ function addUser {
 
 function checkUserExists {
         suffix="-\$(ls -1 \${3}/pod-users*.lst 2>/dev/null | wc -l)"
-        curl -s --user "administrator:\${7:-5ecr3t}" -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
+        curl -s --user "administrator:\${7:-5ecr3t}" --dump-header \${3}/pod-users\${suffix}-header.log -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
         case \${4} in
             oid)
                 if [ \$(grep "^\${5}:" \${3}/pod-users\${suffix}.lst | wc -l) -gt 0 ]
@@ -932,7 +932,7 @@ function addUser {
 
 function checkUserExists {
         suffix="-\$(ls -1 \${3}/pod-users*.lst 2>/dev/null | wc -l)"
-        curl -s --user "administrator:\${7:-5ecr3t}" -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
+        curl -s --user "administrator:\${7:-5ecr3t}" --dump-header \${3}/pod-users\${suffix}-header.log -H "Content-Type: application/xml" -X GET "http://\${1}:\${2}/midpoint/ws/rest/users" | grep "<apti\\|<name>" | paste - - | sed "s|.*oid=\\"\\([^\\"]*\\)\\".*<name>\\([^<]*\\)</name.*|\\1:\\2:|" > \${3}/pod-users\${suffix}.lst
         case \${4} in
             oid)
                 if [ \$(grep "^\${5}:" \${3}/pod-users\${suffix}.lst | wc -l) -gt 0 ]
