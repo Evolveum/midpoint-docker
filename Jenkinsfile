@@ -1,3 +1,5 @@
+def skipNativeTest = params.SKIP_NATIVE ?: false
+def skipH2Test = params.SKIP_H2 ?: false
 podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
     containerTemplate(
         name: "jnlp", 
@@ -259,6 +261,15 @@ kubectl delete -n jenkins pod/kaniko-\${timestamp}
         stage ("test-H2") {
             container ("kubectl") {
                 try {
+                    if (skipH2Test) {
+                        sh """#!/bin/bash
+timestamp="\$(cat timestamp)"
+echo 0 > logs-\${timestamp}/test-result-h2
+"""
+                        throw new RuntimeException("H2 tests are not required")
+                    } else {
+                        echo "Processing the H2 test..."
+                    }
                     sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
 
@@ -613,6 +624,15 @@ exit 0
         stage ("test-native") {
             container ("kubectl") {
                 try {
+                    if (skipNativeTest) {
+                        sh """#!/bin/bash
+timestamp="\$(cat timestamp)"
+echo 0 > logs-\${timestamp}/test-result-native
+"""
+                        throw new RuntimeException("Native tests are not required")
+                    } else {
+                        echo "Processing the Native test..."
+                    }
                     sh """#!/bin/bash
 #legacy check
 docTag='${DOCKERTAG}'
