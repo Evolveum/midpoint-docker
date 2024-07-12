@@ -266,7 +266,8 @@ kubectl delete -n jenkins pod/kaniko-\${timestamp}
 timestamp="\$(cat timestamp)"
 echo 0 > logs-\${timestamp}/test-result-h2
 """
-                        throw new RuntimeException("H2 tests are not required")
+                        echo "H2 tests are not required"
+                        return
                     } else {
                         echo "Processing the H2 test..."
                     }
@@ -629,7 +630,8 @@ exit 0
 timestamp="\$(cat timestamp)"
 echo 0 > logs-\${timestamp}/test-result-native
 """
-                        throw new RuntimeException("Native tests are not required")
+                        echo "Native tests are not required"
+                        return
                     } else {
                         echo "Processing the Native test..."
                     }
