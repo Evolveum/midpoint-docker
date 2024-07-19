@@ -613,6 +613,8 @@ echo \${error} > logs-\${timestamp}/test-result-h2
 kubectl logs -n jenkins \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
 kubectl delete -n jenkins \${podname} \${pvcname}
 
+grep -B 8 -A 4 "^  Version" logs-\${timestamp}/h2/\${phase}/pod-full.log
+
 [ \${error} -ne 0 ] && exit 1
 exit 0                    
                     """
@@ -1168,6 +1170,8 @@ kubectl delete -n jenkins \${podname} \${pvcname}
 kubectl logs -n jenkins \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
 
 kubectl delete -n jenkins \${poddbname} \${pvcdbname}
+
+grep -B 8 -A 4 "^  Version" logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
 
 [ \${error} -ne 0 ] && exit 1
 exit 0
