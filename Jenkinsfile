@@ -547,6 +547,7 @@ else
 
     echo
     kubectl logs -n jenkins \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
+    kubectl exec -n jenkins \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
     kubectl delete -n jenkins \${podname}
 
     phase=\$(( \${phase} + 1 ))
@@ -577,6 +578,8 @@ else
         checkApp jenkins \${podname} logs-\${timestamp}/h2/\${phase}
         error=\$?
     fi
+
+    kubectl exec -n jenkins \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
 
     echo -e "\\nHealth Check Test..."
     if [ \${error} -ne 0 ]
