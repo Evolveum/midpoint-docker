@@ -53,7 +53,25 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
 RUN if [ -e ${MP_DIR}/lib/midpoint.jar ]; \
   then ln -sf midpoint.jar ${MP_DIR}/lib/midpoint.war ; fi
 
-FROM ${base_image}:${base_image_tag}
+FROM ${base_image}:${base_image_tag} as java-17
+
+ENV MP_SET_midpoint_repository_database=h2 \
+ MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
+ MP_SET_midpoint_repository_hibernateHbm2ddl=none \
+ MP_SET_midpoint_repository_initializationFailTimeout=60000 \
+ MP_SET_midpoint_repository_missingSchemaAction=create \
+ MP_SET_midpoint_repository_upgradeableSchemaAction=stop
+
+FROM ${base_image}:${base_image_tag} as java-21
+
+ENV MP_SET_midpoint_repository_database=h2 \
+ MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/./midpoint;DB_CLOSE_ON_EXIT=FALSE;LOCK_MODE=1;LOCK_TIMEOUT=100;MAX_LENGTH_INPLACE_LOB=10240;NON_KEYWORDS=VALUE \
+ MP_SET_midpoint_repository_hibernateHbm2ddl=none \
+ MP_SET_midpoint_repository_initializationFailTimeout=60000 \
+ MP_SET_midpoint_repository_missingSchemaAction=create \
+ MP_SET_midpoint_repository_upgradeableSchemaAction=stop
+
+FROM java-${JAVA_VERSION}
 
 ARG MP_DIR
 ARG MP_VERSION
@@ -72,13 +90,7 @@ LABEL Version="${MP_VERSION}"
 LABEL AppBuildID="${MP_DIST_INFO}"
 LABEL org.opencontainers.image.authors="info@evolveum.com"
 
-ENV MP_SET_midpoint_repository_database=h2 \
- MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/./midpoint;DB_CLOSE_ON_EXIT=FALSE;LOCK_MODE=1;LOCK_TIMEOUT=100;MAX_LENGTH_INPLACE_LOB=10240;NON_KEYWORDS=VALUE \
- MP_SET_midpoint_repository_hibernateHbm2ddl=none \
- MP_SET_midpoint_repository_initializationFailTimeout=60000 \
- MP_SET_midpoint_repository_missingSchemaAction=create \
- MP_SET_midpoint_repository_upgradeableSchemaAction=stop \
- MP_SET_file_encoding=UTF8 \
+ENV MP_SET_file_encoding=UTF8 \
  MP_SET_midpoint_logging_alt_enabled=true \
  MP_MEM_MAX=2048m \
  MP_MEM_INIT=1024m \
