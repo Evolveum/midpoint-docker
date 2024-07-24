@@ -35,7 +35,7 @@ LABEL Version="${MP_VERSION}"
 LABEL org.opencontainers.image.authors="info@evolveum.com"
 
 ENV MP_SET_midpoint_repository_database=h2 \
- MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
+ MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/./midpoint;DB_CLOSE_ON_EXIT=FALSE;LOCK_MODE=1;LOCK_TIMEOUT=100;MAX_LENGTH_INPLACE_LOB=10240;NON_KEYWORDS=VALUE \
  MP_SET_midpoint_repository_hibernateHbm2ddl=none \
  MP_SET_midpoint_repository_initializationFailTimeout=60000 \
  MP_SET_midpoint_repository_missingSchemaAction=create \

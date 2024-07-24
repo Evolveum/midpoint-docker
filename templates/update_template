@@ -1,6 +1,7 @@
 #!/bin/bash
 app="docker"
 repo="midpoint"
+template_prefix="template"
 registry="registry.lab.evolveum.com"
 base_image=alpine
 base_image_tag=latest
@@ -39,6 +40,18 @@ do
 			app="${2}"
 			shift
 			;;
+		repo)
+			repo="${2}"
+			shift
+			;;
+		registry)
+			registry="${2}"
+			shift
+			;;
+		templatePrefix)
+			template_prefix="${2}"
+			shift
+			;;
 		d)
 			dry_run=${2}
 			shift
@@ -70,7 +83,7 @@ do
 	shift
 done
 timestamp="$(date +%s)";
-image_name="localhost/${repo}:template-temp-${timestamp}"
+image_name="localhost/${repo}:${template_prefix}-temp-${timestamp}"
 if [ "${app}" == "podman" ]
 then
 	options="--format docker"
@@ -114,11 +127,11 @@ for s in ${os_id} ${os_id}-${os_version} ${os_id}-${os_version%.*}
 do
 	echo "Evaluating: ${s}"
 	[ "${s: -1:1}" == "-" ] && continue
-	echo "${image_name} => ${registry}/${repo}:template-${architecture}-${java_version}-${s}"
-	${app} tag ${image_name} ${registry}/${repo}:template-${architecture}-${java_version}-${s}
-	[ ${dry_run} -eq 0 ] && ${app} push ${registry}/${repo}:template-${architecture}-${java_version}-${s} 
-	[ ${keep_template} -eq 0 ] && ${app} rmi ${registry}/${repo}:template-${architecture}-${java_version}-${s}
-        processed="${processed}${registry}/${repo}:template-${architecture}-${java_version}-${s}\n"
+	echo "${image_name} => ${registry}/${repo}:${template_prefix}-${architecture}-${java_version}-${s}"
+	${app} tag ${image_name} ${registry}/${repo}:${template_prefix}-${architecture}-${java_version}-${s}
+	[ ${dry_run} -eq 0 ] && ${app} push ${registry}/${repo}:${template_prefix}-${architecture}-${java_version}-${s} 
+	[ ${keep_template} -eq 0 ] && ${app} rmi ${registry}/${repo}:${template_prefix}-${architecture}-${java_version}-${s}
+        processed="${processed}${registry}/${repo}:${template_prefix}-${architecture}-${java_version}-${s}\n"
 done
 
 echo " - - - - - - - - - - -"
