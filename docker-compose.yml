@@ -41,8 +41,6 @@ services:
 
   midpoint_server:
     image: evolveum/midpoint:${MP_VER:-latest}-alpine
-    container_name: midpoint_server
-    hostname: midpoint-container
     depends_on:
       data_init:
         condition: service_completed_successfully
