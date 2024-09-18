@@ -178,7 +178,7 @@ if [ "${1}" = "init-native" ] ; then
 		tail -f /dev/null
 	fi
 	exit 0
-fi	
+fi
 
 mkdir -p "${MIDPOINT_HOME}/log"
 
@@ -225,18 +225,13 @@ fi
 
 ###### Backward compatibility for ENV variables ####
 
-if [ "${MP_NO_ENV_COMPAT:-}" != "1" ] ; then	
+if [ "${MP_NO_ENV_COMPAT:-}" != "1" ] ; then
 	[ "${REPO_PORT:-}" != "" ] && db_port=${REPO_PORT}
 	if [ "${REPO_DATABASE_TYPE:-}" != "" ]
 	then
 		export ${ENV_MAP_PREFIX}midpoint_repository_database="${REPO_DATABASE_TYPE}"
 		[ "${db_port:-}" == "default" ] && db_port=""
 		case ${REPO_DATABASE_TYPE} in
-			h2)
-				[ "${db_port:-}" == "" ] && db_port=5437
-				db_prefix="jdbc:h2:tcp://"
-				db_path="/${REPO_DATABASE:-midpoint}"
-				;;
 			mariadb)
 				[ "${db_port:-}" == "" ] && db_port=3306
 				db_prefix="jdbc:mariadb://"
