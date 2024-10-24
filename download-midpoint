@@ -29,18 +29,22 @@ URL=""
 MP_VER=$(grep "^${MP_VERSION}," $DIR/map_midpoint-docker.csv | cut -d "," -f 2)
 repo=$(grep "^${MP_VERSION}," $DIR/map_midpoint-docker.csv | cut -d "," -f 3)
 
+
 if [ "${MP_VER}" != "" ]
 then
 	echo "Found in map_midpoint-docker.csv - ${MP_VER} @ ${repo}"
 else
 	l_repo="releases"
+	repoList="$(curl -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/[^>]*>\([^<]*\)<.*/\1/" | sort -V)"
+# Alternative sort command:
+#repoList="$(curl -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/[^>]*>\([^<]*\)<.*/\1/" | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
 	if [ "${MP_VERSION}" == "${latestStable}" ]
 	then
 		repo="${l_repo}"
-		MP_VER="$( curl -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/[^>]*>\([^<]*\)<.*/\1/" | grep "^[0-9\.]*$" | tail -n 1)"
+		MP_VER="$( echo "${repoList}" | grep "^[0-9\.]*$" | tail -n 1)"
 		echo "Last stable release has been selected - ${MP_VER} @ ${repo}"
 	else
-		if [ $( curl -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/[^>]*>\([^<]*\)<.*/\1/" | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
+		if [ $( echo "${repoList}" | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
 		then
 			MP_VER="${MP_VERSION}"
 			repo="${l_repo}"
@@ -57,7 +61,7 @@ fi
 
 if [ "${URL}" == "" ] ; then
   l_repo="${repo:-snapshots}"
-  repoList="$( curl -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/[^>]*>\([^<]*\)<.*/\1/" )"
+  repoList="$(curl -s ${base}/${l_repo}/${groupIdUrl}/${artifactId}/maven-metadata.xml | grep "<version>" | sed "s/[^>]*>\([^<]*\)<.*/\1/" | sort -V)"
   if [[ "${MP_VERSION}" == "${latestDevel}" ]] && [[ "${MP_VER}" == "" ]] ; then
 	  l_MP_VER="$( echo "${repoList}" | tail -1 )"
   else
