@@ -131,7 +131,7 @@ do
 			shift
 			;;
 # [help_o] -port <port> .t..t. TCP port used for the forwarding.
-# [help_o] .t. TCP port used for redirec the communication. ( http://localhost:${midPoint_port}/midpoint/ )
+# [help_o] .t. TCP port used for redirect the communication. ( http://localhost:<port>/midpoint/ )
 # [help_o] 
 		port)
 			preserved_args="${preserved_args} ${2}"
