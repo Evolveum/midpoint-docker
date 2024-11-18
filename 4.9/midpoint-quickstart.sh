@@ -13,7 +13,7 @@
 midPoint_script="${0}"
 
 midPoint_base_dir="$(cd "$(dirname "$0")" && pwd -P)"
-midPoint_home_dir="midpoint_home"
+midPoint_home_dir="midpoint-home"
 
 midPoint_uid=$(id -u)
 midPoint_gid=$(id -g)
@@ -27,7 +27,13 @@ midPoint_image_name="evolveum/midpoint"
 midPoint_image_ver=4.9
 midPoint_image_suffix="-alpine"
 
-midPoint_initPw="Test5ecr3t"
+if [ -e ${midPoint_home_dir}/init_pw ]
+then
+	midPoint_initPw="$(cat ${midPoint_home_dir}/init_pw)"
+else
+	midPoint_initPw="$(dd if=/dev/urandom bs=64 count=4 2>/dev/null | base64 -w 0 | sed "s/^.*\([A-Za-z0-9]\{7\}\)\([A-Z]\).*\([a-z]\).*\([0-9]\).*/\1\2\3\4/")"
+	[ -e ${midPoint_home_dir} ] && echo -n "${midPoint_initPw}" > ${midPoint_home_dir}/init_pw
+fi
 
 midPoint_subDirectories="post-initial-objects connid-connectors lib"
 
@@ -239,6 +245,7 @@ function init_env {
 		env_checkDir "${midPoint_base_dir}/${midPoint_home_dir}/${dirToProcess}"
 	done
 
+	[ ! -e ${midPoint_home_dir}/init_pw ] && echo -n "${midPoint_initPw}" > ${midPoint_home_dir}/init_pw
 	[ "${1:-}" != "silent" ] && echo "Inicialization done."
 }
 
@@ -385,25 +392,11 @@ case ${1} in
 		then
 			getDockerCompose | ${midPoint_env_exec} compose -f - up
 		else
-			getDockerCompose | ${midPoint_env_exec} compose -f - up -d
-			maxIterWait=180
-			iterWait=0
-			echo "Waiting to midPoint start up..."
-			logSearch=$( getDockerCompose | docker compose -f - logs midpoint_server 2>/dev/null | grep -c "Completed initialization in" )
-			while [ ${logSearch} -eq 0 -o ${iterWait} -ge ${maxIterWait} ]
-			do
-				sleep 3
-				logSearch=$( getDockerCompose | docker compose -f - logs midpoint_server 2>/dev/null | grep -c "Completed initialization in" )
-			done
-			if [ ${logSearch} -gt 0 ]
-			then
-				echo "MidPoint has started..."
-				echo "To access the WEB GUI go to http://localhost:${midPoint_port}/midpoint/ ."
-				echo " Username : administrator"
-				echo " Password : ${midPoint_initPw} (if not changed yet - init Password)"
-			else
-				getDockerCompose | docker compose -f - logs midpoint_server	
-			fi
+			getDockerCompose | ${midPoint_env_exec} compose -f - up --wait
+			echo "MidPoint has started..."
+			echo "To access the WEB GUI go to http://localhost:${midPoint_port}/midpoint/ ."
+			echo " Username : administrator"
+			echo " Password : ${midPoint_initPw} (if not changed yet - init Password)"
 		fi
 		;;
 # [help_c] down .t..t. Shutdown the environment.
