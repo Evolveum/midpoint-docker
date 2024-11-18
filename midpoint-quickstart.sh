@@ -385,7 +385,7 @@ case ${1} in
 		then
 			getDockerCompose | ${midPoint_env_exec} compose -f - up
 		else
-			getDockerCompose | ${midPoint_env_exec} compose -f - up -d
+			getDockerCompose | ${midPoint_env_exec} compose -f - up --wait
 			maxIterWait=180
 			iterWait=0
 			echo "Waiting to midPoint start up..."
