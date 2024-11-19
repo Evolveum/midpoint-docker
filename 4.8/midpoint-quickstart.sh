@@ -190,6 +190,14 @@ if [[ -z ${1:-} ]]; then
   exit 1
 fi
 
+########
+# Dynamic init PW has been implemented since 4.8.1
+########
+if [ "${midPoint_image_ver}" == "4.8" ]
+then
+	initpw="5ecr3t"
+fi
+
 #########
 # command to execute
 #########
