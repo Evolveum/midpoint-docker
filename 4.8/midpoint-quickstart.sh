@@ -61,6 +61,14 @@ do
 			grep "#[ ]\[help_e\]" $0 | sed "s/.*# \[help_e\] \(.*\)/\1/;s/\.t\./\t/g" | sort -h | uniq
 			echo
 			echo "Current Values (default or already overwritten by arguments) :"
+########
+# Dynamic init PW has been implemented since 4.8.1
+########
+			if [ "${midPoint_image_ver}" == "4.8" ]
+			then
+				midPoint_initPw="5ecr3t"
+			fi
+
 			echo -en " debug\t\t: "
 			[ ${midPoint_debug} -eq 0 ] && echo "No" || echo "Yes"
 			echo -en " foreground\t: "
@@ -195,7 +203,7 @@ fi
 ########
 if [ "${midPoint_image_ver}" == "4.8" ]
 then
-	initpw="5ecr3t"
+	midPoint_initPw="5ecr3t"
 fi
 
 #########
@@ -401,10 +409,19 @@ case ${1} in
 			getDockerCompose | ${midPoint_env_exec} compose -f - up
 		else
 			getDockerCompose | ${midPoint_env_exec} compose -f - up --wait
-			echo "MidPoint has started..."
-			echo "To access the WEB GUI go to http://localhost:${midPoint_port}/midpoint/ ."
-			echo " Username : administrator"
-			echo " Password : ${midPoint_initPw} (if not changed yet - init Password)"
+			dockerExitCode=$?
+			if [ ${dockerExitCode} -eq 0 ]
+			then
+				echo "MidPoint has started..."
+				echo "To access the WEB GUI go to http://localhost:${midPoint_port}/midpoint/ ."
+				echo " Username : administrator"
+				echo " Password : ${midPoint_initPw} (if not changed yet - init Password)"
+			else
+				echo "..."
+				tail -50 ${midPoint_home_dir}/log/midpoint.log
+				echo
+				echo "Midpoint did not start properly (e.g. version mismatch). This should not happend, try to clean and re-init the midPoint environment."
+			fi
 		fi
 		;;
 # [help_c] down .t..t. Shutdown the environment.
