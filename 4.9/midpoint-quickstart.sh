@@ -348,7 +348,7 @@ services:
     command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
     user: "${midPoint_uid}:${midPoint_gid}"
     ports:
-      - 8080:8080
+      - ${midPoint_port}:8080
     environment:
      - MP_SET_midpoint_repository_jdbcUsername=midpoint
      - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
