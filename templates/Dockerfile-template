@@ -67,11 +67,11 @@ COPY container_files/usr-local-bin/* /usr/local/bin/
 RUN if [ "${base_image}" = "ubuntu" ]; \
   then sed 's/main$/main universe/' -i /etc/apt/sources.list && \
        apt-get update -y && \
-       apt-get install -y openjdk-${JAVA_VERSION}-jre-headless tzdata curl && \
+       apt-get install -y openjdk-${JAVA_VERSION}-jre-headless tzdata curl language-pack-en && \
        apt-get clean && \
        rm -rf /var/lib/apt/lists/*/tmp/* /var/tmp/* ; \
   else if [ "${base_image}" = "rockylinux" ]; \
-  then dnf update -y && dnf install -y java-${JAVA_VERSION}-openjdk-headless tzdata bash which && dnf clean all -y ; \
+  then dnf update -y && dnf install -y java-${JAVA_VERSION}-openjdk-headless tzdata bash which glibc-langpack-en && dnf clean all -y ; \
   else apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu musl musl-utils musl-locales ; \
   fi ; fi ; \
   mkdir -p "${MP_DIR}/bin/" ; \
