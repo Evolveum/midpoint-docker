@@ -57,6 +57,9 @@ ENV MP_SET_file_encoding=UTF8 \
  MP_MEM_MAX=2048m \
  MP_MEM_INIT=1024m \
  TZ=UTC \
+ LC_ALL=en_US.UTF-8 \
+ LANG=en_US.UTF-8 \
+ LANGUAGE=en_US.UTF-8 \
  MP_DIR=${MP_DIR}
 
 COPY container_files/usr-local-bin/* /usr/local/bin/
@@ -69,7 +72,7 @@ RUN if [ "${base_image}" = "ubuntu" ]; \
        rm -rf /var/lib/apt/lists/*/tmp/* /var/tmp/* ; \
   else if [ "${base_image}" = "rockylinux" ]; \
   then dnf update -y && dnf install -y java-${JAVA_VERSION}-openjdk-headless tzdata bash which && dnf clean all -y ; \
-  else apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu ; \
+  else apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu musl musl-utils musl-locales ; \
   fi ; fi ; \
   mkdir -p "${MP_DIR}/bin/" ; \
   if [ ! -e "${MP_DIR}/bin/setenv.sh" ] ; then echo "#!/usr/bin/env bash" > "${MP_DIR}/bin/setenv.sh" ; fi ; \
