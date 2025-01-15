@@ -140,3 +140,4 @@ echo " - - - - - - - - - - -"
 
 ${app} rmi ${image_name} 
 rm os-release-${timestamp} java-version-${timestamp}
+[ ${keep_template} -eq 0 ] && ${app} system prune --volumes -a -f
