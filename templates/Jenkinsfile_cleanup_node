@@ -1,0 +1,27 @@
+def remote = [:]
+remote.name = "RPi"
+remote.host = "${REMOTE_IP}"
+remote.allowAnyHosts = true
+remote.pty = true
+
+podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
+    containerTemplate(
+        name: "jnlp", 
+        image: "jenkins/inbound-agent:4.13-2-alpine-jdk11", 
+        runAsUser: '0', 
+        resourceLimitCpu: '900m', 
+        resourceLimitMemory: '1Gi', 
+        resourceRequestCpu: '900m', 
+        resourceRequestMemory: '1Gi'
+    ),
+  ]) {
+    node(POD_LABEL) {
+        withCredentials([sshUserPrivateKey(credentialsId: "${CRED}", keyFileVariable: 'identity', usernameVariable: 'userName')]) {
+          remote.user = userName
+          remote.identityFile = identity
+          stage("cleanup") {
+            sshCommand remote: remote, command: "cd ~ ; if [ ! -e repo ] ; then mkdir repo ; fi ; cd repo; if [ -e midpoint-docker ] ; then cd midpoint-docker ; then git pull ; else git clone https://github.com/Evolveum/midpoint-docker.git; fi ; ~/repo/midpoint-docker/docker_clean_up "
+          }
+        }
+    }
+}

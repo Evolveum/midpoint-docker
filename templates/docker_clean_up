@@ -1,0 +1,12 @@
+#!/bin/bash
+
+## Clean up the images stored on the system
+
+docker images --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f 
+
+## Clean up the docker temp content
+docker system prune -f
+
+## Remove the repository content - local clone
+[ -e ~/repo/midpoint-docker ] && rm -rf ~/repo/midpoint-docker
+
