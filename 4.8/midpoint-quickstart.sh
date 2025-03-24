@@ -24,7 +24,7 @@ midPoint_foreground=0
 midPoint_port=8080
 
 midPoint_image_name="evolveum/midpoint"
-midPoint_image_ver=4.8.5
+midPoint_image_ver=4.8.7
 midPoint_image_suffix="-alpine"
 
 if [ -e ${midPoint_home_dir}/init_pw ]
@@ -261,7 +261,7 @@ function init_env {
 		env_checkDir "${midPoint_base_dir}/${midPoint_home_dir}/${dirToProcess}"
 	done
 
-	[ ! -e ${midPoint_home_dir}/init_pw ] && echo -n "${midPoint_initPw}" > ${midPoint_home_dir}/init_pw
+	[ ! -e ${midPoint_base_dir}/${midPoint_home_dir}/init_pw ] && echo -n "${midPoint_initPw}" > ${midPoint_base_dir}/${midPoint_home_dir}/init_pw
 	[ "${1:-}" != "silent" ] && echo "Inicialization done."
 }
 
