@@ -20,7 +20,7 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
           remote.user = userName
           remote.identityFile = identity
           stage("cleanup") {
-            sshCommand remote: remote, command: "cd ~ ; if [ ! -e repo ] ; then mkdir repo ; fi ; cd repo; if [ -e midpoint-docker ] ; then cd midpoint-docker ; then git pull ; else git clone https://github.com/Evolveum/midpoint-docker.git; fi ; ~/repo/midpoint-docker/docker_clean_up "
+            sshCommand remote: remote, command: "cd ~ ; if [ ! -e repo ] ; then mkdir repo ; fi ; cd repo; if [ -e midpoint-docker ] ; then cd midpoint-docker ; git pull ; else git clone https://github.com/Evolveum/midpoint-docker.git; fi ; ~/repo/midpoint-docker/templates/docker_clean_up "
           }
         }
     }
