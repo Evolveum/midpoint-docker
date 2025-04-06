@@ -53,7 +53,7 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
 RUN if [ -e ${MP_DIR}/lib/midpoint.jar ]; \
   then ln -sf midpoint.jar ${MP_DIR}/lib/midpoint.war ; fi
 
-FROM ${base_image}:${base_image_tag} as java-17
+FROM ${base_image}:${base_image_tag} AS java-17
 
 ENV MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
@@ -62,7 +62,7 @@ ENV MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_missingSchemaAction=create \
  MP_SET_midpoint_repository_upgradeableSchemaAction=stop
 
-FROM ${base_image}:${base_image_tag} as java-21
+FROM ${base_image}:${base_image_tag} AS java-21
 
 ENV MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/./midpoint;DB_CLOSE_ON_EXIT=FALSE;LOCK_MODE=1;LOCK_TIMEOUT=100;MAX_LENGTH_INPLACE_LOB=10240;NON_KEYWORDS=VALUE \
@@ -134,6 +134,20 @@ RUN echo "fix for starting midpoint around release 4.2..." ; \
   fi ; \
   echo "end of fix check..." ; \
   if [ $(grep -c "container" ${MP_DIR}/bin/midpoint.sh) -eq 0 ]; then \
-  cp /usr/local/bin/midpoint.sh ${MP_DIR}/bin/midpoint.sh && echo "midpoint.sh file replaced" ; fi 
+  cp /usr/local/bin/midpoint.sh ${MP_DIR}/bin/midpoint.sh && echo "midpoint.sh file replaced" ; fi ; \
+  # Create midpoint user and group
+  if [ "${base_image}" = "ubuntu" ]; then \
+    addgroup --system midpoint && adduser --system --no-create-home --ingroup midpoint midpoint ; \
+  elif [ "${base_image}" = "rockylinux" ]; then \
+    groupadd --system midpoint && useradd --system --no-create-home --gid midpoint midpoint ; \
+  else \
+    addgroup -S midpoint && adduser -S -H -G midpoint midpoint ; \
+  fi ; \
+  # Set ownership of the midpoint directory
+  mkdir -p ${MP_DIR}/var && chown -R midpoint:midpoint ${MP_DIR}
 
 COPY --from=0 ${MP_DIR} ${MP_DIR}/
+RUN chown -R midpoint:midpoint ${MP_DIR}
+
+# Switch to non-privileged user
+USER midpoint
