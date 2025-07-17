@@ -24,7 +24,7 @@ midPoint_foreground=0
 midPoint_port=8080
 
 midPoint_image_name="evolveum/midpoint"
-midPoint_image_ver=4.9.2
+midPoint_image_ver=4.9.3
 midPoint_image_suffix="-alpine"
 
 if [ -e ${midPoint_home_dir}/init_pw ]
