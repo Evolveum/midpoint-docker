@@ -157,6 +157,27 @@ generate_instance_label() {
 
 midPoint_label="$(generate_instance_label)"
 
+# gatekeeper section - checking the presence and content of the midpoint-home folder
+if [ -d "$midPoint_home_dir" ]; then
+    marker_file="$midPoint_home_dir/instance_marker"
+
+    if [ ! -f "$marker_file" ] || ! source "$marker_file" || \
+       [[ "$marker_midPoint_home_dir" != "$midPoint_home_dir" ]] || \
+       [[ "$marker_midPoint_image_name" != "$midPoint_image_name" ]] || \
+       [[ "$marker_midPoint_image_ver" != "$midPoint_image_ver" ]] || \
+       [[ "$marker_midPoint_label" != "$midPoint_label" ]]; then
+          cat <<EOF
+WARNING: Existing midpoint-home does not match this instance and proceeding to run this script here may result in overwriting an existing midPoint instance.
+Consider moving the script or using a different folder.
+EOF
+        read -r -p "Do you want to proceed in your current folder anyway? (Y/n) " choice
+        if [[ "$choice" != "Y" ]]; then
+            echo "Aborted."
+            exit 1
+        fi
+    fi
+fi
+
 # setup YAML function (not saved into any file)
 get_docker_compose() {
 cat <<EOF
@@ -271,6 +292,14 @@ run_midpoint() {
 
       echo "Fresh installation  -  creating home folder and setting up MidPoint..."
       mkdir -p "$midPoint_home_dir"
+
+      # creating marker file that is checked in the beginning of each run of this script
+      cat <<EOF > "$midPoint_home_dir/instance_marker"
+marker_midPoint_home_dir=$midPoint_home_dir
+marker_midPoint_image_name=$midPoint_image_name
+marker_midPoint_image_ver=$midPoint_image_ver
+marker_midPoint_label=$midPoint_label
+EOF
 
       if [ -z "$midPoint_initPw" ]; then
         unset MIDPOINT_ADMIN_PASSWORD
