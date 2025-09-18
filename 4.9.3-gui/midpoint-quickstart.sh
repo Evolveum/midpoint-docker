@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # global variables setup
-midPoint_base_dir="$(pwd)"
+# midPoint_base_dir="$(pwd)"
+midPoint_base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 midPoint_port=8080
 midPoint_home_dir="midpoint-home"
 midPoint_image_name="evolveum/midpoint"
@@ -110,8 +111,8 @@ get_port() {
           return 1
         fi
 
-        if [ "$requested_port" -lt 1024 ] || [ "$requested_port" -gt 65535 ]; then
-            echo "Port must be between 1024 and 65535." >&2
+        if [ "$requested_port" -lt 1 ] || [ "$requested_port" -gt 65535 ]; then
+            echo "Port must be between 1 and 65535." >&2
             return 1
         fi
 
@@ -170,8 +171,9 @@ if [ -d "$midPoint_home_dir" ]; then
 WARNING: Existing midpoint-home does not match this instance and proceeding to run this script here may result in overwriting an existing midPoint instance.
 Consider moving the script or using a different folder.
 EOF
-        read -r -p "Do you want to proceed in your current folder anyway? (Y/n) " choice
-        if [[ "$choice" != "Y" ]]; then
+        read -r -p "Do you want to proceed in your current folder anyway? (y/N) " choice
+        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
+        if [[ "$choice" != "y" ]]; then
             echo "Aborted."
             exit 1
         fi
@@ -284,11 +286,12 @@ run_midpoint() {
   fi
 
   if [ ! -d "$midPoint_home_dir" ]; then
-      if [ -n "$requested_password" ]; then
-          get_password "$requested_password" || return 1
-      else
-          get_password || return 1
-      fi
+      # if [ -n "$requested_password" ]; then
+      #     get_password "$requested_password" || return 1
+      # else
+      #     get_password || return 1
+      # fi
+      get_password "$requested_password" || return 1
 
       echo "Fresh installation  -  creating home folder and setting up MidPoint..."
       mkdir -p "$midPoint_home_dir"
@@ -312,7 +315,7 @@ EOF
   else
       echo "Existing installation - restarting MidPoint..."
       if [ -n "$requested_password" ]; then
-          echo "Password can be changed only in midPoint on existing installation. If you wish to set a new password here, you need to reset midPoint to factory settings."
+          echo "Password can be changed only in midPoint on existing installation. You can change it in midPoint in your Profile settings. If you wish to set a new password here, you need to reset midPoint to factory settings."
       fi
 
       get_docker_compose | docker compose -f - up -d --force-recreate
@@ -543,9 +546,9 @@ get_user_choice() {
     local prompt="$1"
     local choice
 
-    read -r -p "$prompt (Y/n) " choice
-
-    if [[ "$choice" == "Y" ]]; then
+    read -r -p "$prompt (y/N) " choice
+    choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
+    if [[ "$choice" == "y" ]]; then
       return 0
     else
       echo "Aborted"
