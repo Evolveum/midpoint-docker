@@ -3,6 +3,7 @@
 # global variables setup
 # midPoint_base_dir="$(pwd)"
 midPoint_base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+midPoint_instance_marker="instance_marker"
 midPoint_port=8080
 midPoint_home_dir="midpoint-home"
 midPoint_image_name="evolveum/midpoint"
@@ -10,7 +11,7 @@ midPoint_image_ver=4.9.3
 midPoint_image_suffix="-alpine"
 midPoint_uid=$(id -u)
 midPoint_gid=$(id -g)
-midPoint_initPw=""
+midPoint_init_pwd=""
 midPoint_logo='
                    _ _____              _
              _    | |  _  \     _     _| |_
@@ -21,7 +22,7 @@ midPoint_logo='
 
 '
 
-# helper functions - get_running_port, validate_password, get_password
+# helper functions - get_running_port, validate_pwd, get_pwd
 get_running_port() {
     local port=$(docker ps \
     --filter "label=${midPoint_label}" \
@@ -32,18 +33,18 @@ get_running_port() {
 }
 
 # regex used to comply with midPoint to avoid clashes coming from midPoint
-validate_password() {
-  local tested_password=$1
-  if [[ ${#tested_password} -lt 8 ]]; then
+validate_pwd() {
+  local tested_pwd=$1
+  if [[ ${#tested_pwd} -lt 8 ]]; then
       echo "Your password needs to be at least 8 characters long."
       return 1
-  elif ! [[ ${tested_password} =~ [A-Z] ]]; then
+  elif ! [[ ${tested_pwd} =~ [A-Z] ]]; then
       echo "Your password needs to contain at least one uppercase letter."
       return 1
-  elif ! [[ ${tested_password} =~ [a-z] ]]; then
+  elif ! [[ ${tested_pwd} =~ [a-z] ]]; then
       echo "Your password needs to contain at least one lowercase letter."
       return 1
-  elif ! [[ ${tested_password} =~ [0-9] ]]; then
+  elif ! [[ ${tested_pwd} =~ [0-9] ]]; then
       echo "Your password needs to contain at least one number."
       return 1
   else
@@ -52,11 +53,11 @@ validate_password() {
 }
 
 # handles user kwarg password, interactive user password and midPoint generated password
-get_password() {
-    local requested_password=$1
-    if [ -n "$requested_password" ]; then
-      if validate_password "$requested_password"; then
-          midPoint_initPw="$requested_password"
+get_pwd() {
+    local requested_pwd=$1
+    if [ -n "$requested_pwd" ]; then
+      if validate_pwd "$requested_pwd"; then
+          midPoint_init_pwd="$requested_pwd"
           return 0
       else
           return 1
@@ -75,12 +76,12 @@ For automatically generated password in midPoint, leave blank and press ENTER.
 EOF
           read -r -p "" pwd_input
           if [ -z "$pwd_input" ]; then
-              midPoint_initPw=""
+              midPoint_init_pwd=""
               break
           fi
 
-          if validate_password "$pwd_input"; then
-              midPoint_initPw="$pwd_input"
+          if validate_pwd "$pwd_input"; then
+              midPoint_init_pwd="$pwd_input"
               break
           else
               echo "Please try again."
@@ -153,14 +154,14 @@ generate_instance_label() {
     else
         hash=$(echo -n "$midPoint_base_dir" | shasum -a 256 | awk '{print $1}')
     fi
-    echo "MI${hash:0:32}"
+    echo "mid${hash:0:32}"
 }
 
 midPoint_label="$(generate_instance_label)"
 
 # gatekeeper section - checking the presence and content of the midpoint-home folder
 if [ -d "$midPoint_home_dir" ]; then
-    marker_file="$midPoint_home_dir/instance_marker"
+    marker_file="$midPoint_home_dir/$midPoint_instance_marker"
 
     if [ ! -f "$marker_file" ] || ! source "$marker_file" || \
        [[ "$marker_midPoint_home_dir" != "$midPoint_home_dir" ]] || \
@@ -244,7 +245,7 @@ services:
       - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
       - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
       - MP_SET_midpoint_repository_database=postgresql
-      $( [ -n "$midPoint_initPw" ] && echo "- MP_SET_midpoint_administrator_initialPassword=${midPoint_initPw}" )
+      $( [ -n "$midPoint_init_pwd" ] && echo "- MP_SET_midpoint_administrator_initialPassword=${midPoint_init_pwd}" )
       - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
       - MP_NO_ENV_COMPAT=1
     networks:
@@ -266,15 +267,15 @@ volumes:
 EOF
 }
 
-# core functions - run_midpoint, show_info, show_logs, show_compose_file, show_help, delete_db, delete_midpoint, quit_midpoint
-run_midpoint() {
+# core functions - run_midPoint, show_info, show_logs, show_compose_file, show_help, delete_db, delete_midPoint, quit_midPoint
+run_midPoint() {
   local requested_port=""
-  local requested_password=""
+  local requested_pwd=""
 
   for arg in "$@"; do
     case $arg in
         port=*) requested_port="${arg#*=}" ;;
-        password=*) requested_password="${arg#*=}" ;;
+        password=*) requested_pwd="${arg#*=}" ;;
         *) echo "Unknown option $arg"; return 1 ;;
     esac
   done
@@ -286,66 +287,66 @@ run_midpoint() {
   fi
 
   if [ ! -d "$midPoint_home_dir" ]; then
-      # if [ -n "$requested_password" ]; then
-      #     get_password "$requested_password" || return 1
+      # if [ -n "$requested_pwd" ]; then
+      #     get_pwd "$requested_pwd" || return 1
       # else
-      #     get_password || return 1
+      #     get_pwd || return 1
       # fi
-      get_password "$requested_password" || return 1
+      get_pwd "$requested_pwd" || return 1
 
-      echo "Fresh installation  -  creating home folder and setting up MidPoint..."
-      mkdir -p "$midPoint_home_dir"
+      echo "Fresh installation  -  creating home folder and setting up midPoint..."
+      mkdir -p "$midPoint_home_dir" || { echo "ERROR: Failed to create $midPoint_home_dir" >&2; return 1; }
 
       # creating marker file that is checked in the beginning of each run of this script
-      cat <<EOF > "$midPoint_home_dir/instance_marker"
+      cat <<EOF > "$midPoint_home_dir/$midPoint_instance_marker" || { echo "ERROR: Failed to create instance_marker file" >&2; return 1; }
 marker_midPoint_home_dir=$midPoint_home_dir
 marker_midPoint_image_name=$midPoint_image_name
 marker_midPoint_image_ver=$midPoint_image_ver
 marker_midPoint_label=$midPoint_label
 EOF
 
-      if [ -z "$midPoint_initPw" ]; then
+      if [ -z "$midPoint_init_pwd" ]; then
         unset MIDPOINT_ADMIN_PASSWORD
-        echo "MidPoint will generate the administrator password automatically since none was defined by the user."
+        echo "Administrator password will be generated automatically by midPoint since none was defined by the user."
       else
-        export MIDPOINT_ADMIN_PASSWORD="$midPoint_initPw"
+        export MIDPOINT_ADMIN_PASSWORD="$midPoint_init_pwd"
       fi
 
       get_docker_compose | docker compose -f - up -d --wait --force-recreate --renew-anon-volumes
   else
-      echo "Existing installation - restarting MidPoint..."
-      if [ -n "$requested_password" ]; then
+      echo "Existing installation - restarting midPoint..."
+      if [ -n "$requested_pwd" ]; then
           echo "Password can be changed only in midPoint on existing installation. You can change it in midPoint in your Profile settings. If you wish to set a new password here, you need to reset midPoint to factory settings."
       fi
 
       get_docker_compose | docker compose -f - up -d --force-recreate
   fi
 
-  dockerExitCode=$?
-  if [ "$dockerExitCode" -eq 0 ]; then
+  docker_exit_code=$?
+  if [ "$docker_exit_code" -eq 0 ]; then
       echo
-      echo "MidPoint has started..."
+      echo "Starting midPoint..."
       echo "To access the WEB GUI go to: http://localhost:${midPoint_port}/midpoint/"
       echo "Username: administrator"
-      if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_initPw" ]; then
+      if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
         container_name=$(docker ps \
           --filter "label=${midPoint_label}" \
           --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
           --format "{{.Names}}" | head -n1)
-        midPoint_initPw=$(docker logs "$container_name" 2>&1 \
+        midPoint_init_pwd=$(docker logs "$container_name" 2>&1 \
           | grep "Administrator initial password" \
           | tail -n1 \
           | sed -E 's/.*"([^"]+)".*/\1/')
-        if [ -z "$midPoint_initPw" ]; then
+        if [ -z "$midPoint_init_pwd" ]; then
           echo "Password set during first start of midPoint; if it was lost, reset midPoint to generate a new one."
         else
-          echo "Initial automatically generated password: ${midPoint_initPw} (recommended to change in midPoint for increased security)"
+          echo "Initial automatically generated password: ${midPoint_init_pwd} (recommended to change in midPoint for increased security)"
         fi
       else
-        echo "Initial password: ${midPoint_initPw} (recommended to change in MidPoint for increased security)"
+        echo "Initial password: ${midPoint_init_pwd} (recommended to change in midPoint for increased security)"
       fi
   else
-      echo "Something went wrong while starting MidPoint (exit code ${dockerExitCode})."
+      echo "Something went wrong while starting midPoint (exit code ${docker_exit_code})."
   fi
 }
 
@@ -393,7 +394,7 @@ EOF
     else
         cat << EOF
 
-MidPoint is not installed yet — use run to generate home folder and default password.
+midPoint is not installed yet — use run to generate home folder and default password.
 
 Script name: $(basename "$0")
 Running in folder: ${midPoint_base_dir}
@@ -422,6 +423,7 @@ show_logs() {
 
     while true; do
         read -r -n1 key
+        key=$(echo "$key" | tr '[:upper:]' '[:lower:]')
         if [[ $key == "b" ]]; then
             kill "$logs_pid" 2>/dev/null
             wait "$logs_pid" 2>/dev/null
@@ -451,8 +453,8 @@ Option:
               port        Select port number (1024 - 65535) on which midPoint will run;
               password    set initial password for midPoint (works only on initial start, otherwise is ignored)
   info      Show version, image, and environment details
-  yaml      Print the Docker Compose YAML used internally by this script; the file is not saved in the enironment
-  logs      Display logs of the running midPoint container; press 'b' to stop the logs
+  yaml      Print the Docker Compose YAML used internally by this script; the file is not saved in the environment
+  logs      Display logs of the running midPoint container; press 'B' to stop the logs
   stop      Stop midPoint without deleting user's data
   reset     Reset midPoint to factory settings; delete database (including password)
   delete    Delete midPoint (containers, volumes, images, and local data, including password)
@@ -476,17 +478,17 @@ delete_db() {
         echo "Database has been reset."
 
         if [ -n "$running_port" ]; then
-          echo "MidPoint will now restart automatically."
-          run_midpoint port="$running_port"
+          echo "midPoint will now restart automatically."
+          run_midPoint port="$running_port"
         else
-          echo "MidPoint can now be started again."
+          echo "midPoint can now be started again."
         fi
     else
         echo "No database to reset yet, start midPoint first."
     fi
 }
 
-delete_midpoint() {
+delete_midPoint() {
     echo "Removing current midPoint version"
 
     docker ps -a --filter "label=${midPoint_label}" --format "{{.Names}}" | xargs -r docker rm -f
@@ -534,14 +536,14 @@ delete_midpoint() {
     fi
 }
 
-quit_midpoint() {
+quit_midPoint() {
     echo "Shutting down midPoint..."
     get_docker_compose | docker compose -f - stop
     echo "Shut down complete."
     exit 0
 }
 
-# wrapper function for user confirmation of delete_db and delete_midpoint - only used in default mode with GUI menu
+# wrapper function for user confirmation of delete_db and delete_midPoint - only used in default mode with GUI menu
 get_user_choice() {
     local prompt="$1"
     local choice
@@ -565,12 +567,10 @@ delete_db_after_confirm() {
   delete_db
 }
 
-delete_midpoint_after_confirm() {
+delete_midPoint_after_confirm() {
     local warning_message
     warning_message=$(cat <<EOF
-This action will permanently delete the whole current midPoint application, including all its data, settings and program files.
-Other midPoint instances on this computer will keep their data safe but they may take longer to start next time they are used.
-Are you sure you want to proceed?
+This action will permanently delete the current midPoint instance, including all its data, settings, and files. Other instances that may have been runnign on this computer will remain safe. Are you sure you want to proceed?
 EOF
 )
 
@@ -578,7 +578,7 @@ EOF
         return
     fi
 
-    delete_midpoint
+    delete_midPoint
 }
 
 # interface section
@@ -600,16 +600,16 @@ show_default_menu() {
 | (Q)uit and stop midPoint     |
 +------------------------------+
 EOF
-        read -r -p "Select option: " CHOICE_RAW
-        CHOICE=$(echo "$CHOICE_RAW" | tr '[:upper:]' '[:lower:]')
+        read -r -p "Select option: " choice
+        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
 
-        case $CHOICE in
-            s) run_midpoint ;;
+        case $choice in
+            s) run_midPoint ;;
             i) show_info ;;
             l) show_logs ;;
             res) delete_db_after_confirm ;;
-            del) delete_midpoint_after_confirm ;;
-            q) quit_midpoint ;;
+            del) delete_midPoint_after_confirm ;;
+            q) quit_midPoint ;;
             *) echo "Unknown choice, please try again." ;;
         esac
     done
@@ -620,7 +620,7 @@ cmd="$1"
 shift || true
 
 requested_port=""
-requested_password=""
+requested_pwd=""
 
 for arg in "$@"; do
     case $arg in
@@ -628,7 +628,7 @@ for arg in "$@"; do
             requested_port="${arg#*=}"
             ;;
         password=*)
-            requested_password="${arg#*=}"
+            requested_pwd="${arg#*=}"
             ;;
           *)
             echo "Unknown option: $arg"
@@ -639,7 +639,7 @@ done
 
 case "$cmd" in
     start)
-        run_midpoint "port=$requested_port" "password=$requested_password"
+        run_midPoint "port=$requested_port" "password=$requested_pwd"
         exit 0
         ;;
     info)
@@ -663,11 +663,11 @@ case "$cmd" in
         exit 0
         ;;
     delete)
-        delete_midpoint
+        delete_midPoint
         exit 0
         ;;
     stop)
-        quit_midpoint
+        quit_midPoint
         exit 0
         ;;
       "")
