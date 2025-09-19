@@ -627,7 +627,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --port|-p)
             if [ -z "$2" ] || [[ "$2" == -* ]]; then
-                echo "Error: --port requires a value"
+                echo "Error: --port requires a value, e.g. --port 8080"
                 exit 1
             fi
             requested_port="$2"
@@ -635,7 +635,7 @@ while [ $# -gt 0 ]; do
             ;;
         --password|-w)
             if [ -z "$2" ] || [[ "$2" == -* ]]; then
-                echo "Error: --password requires a value"
+                echo "Error: --password requires a value, e.g. --password 5ecretPassw0rd"
                 exit 1
             fi
             requested_pwd="$2"
