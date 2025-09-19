@@ -287,11 +287,6 @@ run_midPoint() {
   fi
 
   if [ ! -d "$midPoint_home_dir" ]; then
-      # if [ -n "$requested_pwd" ]; then
-      #     get_pwd "$requested_pwd" || return 1
-      # else
-      #     get_pwd || return 1
-      # fi
       get_pwd "$requested_pwd" || return 1
 
       echo "Fresh installation  -  creating home folder and setting up midPoint..."
@@ -312,41 +307,43 @@ EOF
         export MIDPOINT_ADMIN_PASSWORD="$midPoint_init_pwd"
       fi
 
-      get_docker_compose | docker compose -f - up -d --wait --force-recreate --renew-anon-volumes
+      get_docker_compose | docker compose -f - up -d --wait --force-recreate --renew-anon-volumes || { echo "ERROR: Failed to start containers." >&2; return 1; }
   else
       echo "Existing installation - restarting midPoint..."
       if [ -n "$requested_pwd" ]; then
           echo "Password can be changed only in midPoint on existing installation. You can change it in midPoint in your Profile settings. If you wish to set a new password here, you need to reset midPoint to factory settings."
       fi
 
-      get_docker_compose | docker compose -f - up -d --force-recreate
+      get_docker_compose | docker compose -f - up -d --force-recreate || { echo "ERROR: Failed to restart containers." >&2; return 1; }
   fi
 
-  docker_exit_code=$?
-  if [ "$docker_exit_code" -eq 0 ]; then
-      echo
-      echo "Starting midPoint..."
-      echo "To access the WEB GUI go to: http://localhost:${midPoint_port}/midpoint/"
-      echo "Username: administrator"
-      if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
-        container_name=$(docker ps \
-          --filter "label=${midPoint_label}" \
-          --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
-          --format "{{.Names}}" | head -n1)
-        midPoint_init_pwd=$(docker logs "$container_name" 2>&1 \
-          | grep "Administrator initial password" \
-          | tail -n1 \
-          | sed -E 's/.*"([^"]+)".*/\1/')
-        if [ -z "$midPoint_init_pwd" ]; then
-          echo "Password set during first start of midPoint; if it was lost, reset midPoint to generate a new one."
-        else
-          echo "Initial automatically generated password: ${midPoint_init_pwd} (recommended to change in midPoint for increased security)"
-        fi
-      else
-        echo "Initial password: ${midPoint_init_pwd} (recommended to change in midPoint for increased security)"
-      fi
+  echo
+  echo "Starting midPoint..."
+  echo "To access the WEB GUI go to: http://localhost:${midPoint_port}/midpoint/"
+  echo "Username: administrator"
+
+  if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
+    container_name=$(docker ps \
+      --filter "label=${midPoint_label}" \
+      --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
+      --format "{{.Names}}" | head -n1)
+
+    if [ -z "$container_name" ]; then
+      echo "Could not determine container name." >&2
+      return 1
+    fi
+
+    midPoint_init_pwd=$(docker logs "$container_name" 2>&1 \
+      | grep "Administrator initial password" \
+      | tail -n1 \
+      | sed -E 's/.*"([^"]+)".*/\1/')
+    if [ -z "$midPoint_init_pwd" ]; then
+      echo "Password set during first start of midPoint; if it was lost, reset midPoint to generate a new one."
+    else
+      echo "Initial automatically generated password: ${midPoint_init_pwd} (recommended to change in midPoint for increased security)"
+    fi
   else
-      echo "Something went wrong while starting midPoint (exit code ${docker_exit_code})."
+    echo "Initial password: ${midPoint_init_pwd} (recommended to change in midPoint for increased security)"
   fi
 }
 
