@@ -149,6 +149,7 @@ get_port() {
 }
 
 generate_instance_label() {
+    # condition used to ensure compatibility in MacOS
     if command -v sha256sum >/dev/null 2>&1; then
         hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
     else
@@ -567,7 +568,7 @@ delete_db_after_confirm() {
 delete_midPoint_after_confirm() {
     local warning_message
     warning_message=$(cat <<EOF
-This action will permanently delete the current midPoint instance, including all its data, settings, and files. Other instances that may have been runnign on this computer will remain safe. Are you sure you want to proceed?
+This action will permanently delete the current midPoint instance, including all its data, settings, and files. Other instances that may have been running on this computer will remain safe. Are you sure you want to proceed?
 EOF
 )
 
@@ -614,21 +615,38 @@ EOF
 
 # advanced control args and default GUI menu function call for no arg case
 cmd="$1"
-shift || true
+if [ -n "$cmd" ]; then
+    shift
+fi
 
 requested_port=""
 requested_pwd=""
 
-for arg in "$@"; do
-    case $arg in
-        port=*)
-            requested_port="${arg#*=}"
+# proprietary parsing used instead of getopt to ensure consistent working in MacOS default bash version
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --port|-p)
+            if [ -z "$2" ] || [[ "$2" == -* ]]; then
+                echo "Error: --port requires a value"
+                exit 1
+            fi
+            requested_port="$2"
+            shift 2
             ;;
-        password=*)
-            requested_pwd="${arg#*=}"
+        --password|-w)
+            if [ -z "$2" ] || [[ "$2" == -* ]]; then
+                echo "Error: --password requires a value"
+                exit 1
+            fi
+            requested_pwd="$2"
+            shift 2
             ;;
-          *)
-            echo "Unknown option: $arg"
+        start|info|logs|yaml|reset|delete|stop|help)
+            cmd="$1"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
             exit 1
             ;;
     esac
