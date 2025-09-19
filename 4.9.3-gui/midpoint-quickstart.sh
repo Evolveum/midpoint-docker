@@ -448,8 +448,8 @@ Usage: $(basename "$0") [OPTION]
 
 Option:
   start     Start midPoint using Docker Compose; takes 2 optional keyword arguments:
-              port        Select port number (1024 - 65535) on which midPoint will run;
-              password    set initial password for midPoint (works only on initial start, otherwise is ignored)
+              --port (-p)       Select port number (up to 65535) on which midPoint will run;
+              --password (-w)    set initial password for midPoint (works only on initial start, otherwise is ignored)
   info      Show version, image, and environment details
   yaml      Print the Docker Compose YAML used internally by this script; the file is not saved in the environment
   logs      Display logs of the running midPoint container; press 'B' to stop the logs
@@ -622,7 +622,7 @@ fi
 requested_port=""
 requested_pwd=""
 
-# proprietary parsing used instead of getopt to ensure consistent working in MacOS default bash version
+# proprietary parsing used instead of getopt to ensure consistent working in MacOS default bash BSD version
 while [ $# -gt 0 ]; do
     case "$1" in
         --port|-p)
