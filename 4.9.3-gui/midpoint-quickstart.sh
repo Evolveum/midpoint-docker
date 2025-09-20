@@ -120,7 +120,9 @@ get_port() {
         if [ "$requested_port" == "$running_port" ]; then
             echo "$requested_port"
             return 0
-        elif lsof -i :"$requested_port" >/dev/null 2>&1; then
+        # elif lsof -i :"$requested_port" >/dev/null 2>&1; then
+        # checking for the running port here is different to prevent false busy detection in TIME_WAIT/CLOSE_WAIT
+        elif lsof -iTCP:"$requested_port" -sTCP:LISTEN >/dev/null 2>&1; then
             echo "Port $requested_port is busy, choose a different one" >&2
             return 1
         else
