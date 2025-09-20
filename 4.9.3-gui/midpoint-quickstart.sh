@@ -469,9 +469,8 @@ delete_db() {
     if [ -d "$midPoint_home_dir" ]; then
         running_port="$(get_running_port)"
 
-        docker ps -a --filter "label=${midPoint_label}" --format "{{.Names}}" | xargs -r docker rm -f
-        docker network ls --filter "label=${midPoint_label}" --format "{{.Name}}" | xargs -r docker network rm
-        docker volume ls --filter "label=${midPoint_label}" --format "{{.Name}}" | xargs -r docker volume rm
+        get_docker_compose | docker compose -f - down --volumes
+
         rm -rf "$midPoint_home_dir"
         echo "Database has been reset."
 
@@ -489,7 +488,9 @@ delete_db() {
 delete_midPoint() {
     echo "Removing current midPoint version"
 
-    docker ps -a --filter "label=${midPoint_label}" --format "{{.Names}}" | xargs -r docker rm -f
+    get_docker_compose | docker compose -f - down --volumes
+
+    docker ps -a --filter "label=${midPoint_label}" --format "{{.Names}}" | xargs -r docker rm
     docker network ls --filter "label=${midPoint_label}" --format "{{.Name}}" | xargs -r docker network rm
     docker volume ls --filter "label=${midPoint_label}" --format "{{.Name}}" | xargs -r docker volume rm
 
@@ -510,33 +511,11 @@ delete_midPoint() {
     else
         echo "All midPoint program files and local data installed by this script have been successfully deleted."
     fi
-
-    # handles the case of "busy port" lagging after deleting 
-    running_port="$(get_running_port)"
-    local timeout=3
-    local interval=1
-    local elapsed=0
-    local force_freed=false
-
-    while lsof -i :"$running_port" -sTCP:LISTEN -t -u "$USER" >/dev/null 2>&1; do
-        if (( elapsed >= timeout )); then
-            echo "Freeing port ${running_port}..."
-            force_freed=true
-            lsof -ti :"$running_port" -sTCP:LISTEN -u "$USER" | xargs -r kill -9
-            break
-        fi
-        sleep $interval
-        ((elapsed += interval))
-    done
-
-    if [ "$force_freed" = true ]; then
-        echo "Port ${running_port} is now free."
-    fi
 }
 
 quit_midPoint() {
     echo "Shutting down midPoint..."
-    get_docker_compose | docker compose -f - stop
+    get_docker_compose | docker compose -f - down
     echo "Shut down complete."
     exit 0
 }
