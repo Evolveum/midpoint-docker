@@ -25,7 +25,7 @@ midPoint_logo='
 # helper functions - get_running_port, validate_pwd, get_pwd
 get_running_port() {
     local port=$(docker ps \
-    --filter "label=${midPoint_label}" \
+    --filter "label=${midPoint_instance_hash}" \
     --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
     --format "{{.Ports}}" | grep -oE '[0-9]+->8080/tcp' | head -n1 | cut -d'-' -f1)
 
@@ -91,7 +91,19 @@ EOF
     fi
 }
 
-# global setup functions - get_port, generate_instance_label used in global variables
+# global setup functions -  generate_instance_hash, get_port used in global variables
+generate_instance_hash() {
+    # condition used to ensure compatibility in MacOS
+    if command -v sha256sum >/dev/null 2>&1; then
+        hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
+    else
+        hash=$(echo -n "$midPoint_base_dir" | shasum -a 256 | awk '{print $1}')
+    fi
+    echo "mid${hash:0:32}"
+}
+
+midPoint_instance_hash="$(generate_instance_hash)"
+
 get_port() {
     local requested_port="$1"
     local default_start=8080
@@ -150,18 +162,6 @@ get_port() {
     return 1
 }
 
-generate_instance_label() {
-    # condition used to ensure compatibility in MacOS
-    if command -v sha256sum >/dev/null 2>&1; then
-        hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
-    else
-        hash=$(echo -n "$midPoint_base_dir" | shasum -a 256 | awk '{print $1}')
-    fi
-    echo "mid${hash:0:32}"
-}
-
-midPoint_label="$(generate_instance_label)"
-
 # gatekeeper section - checking the presence and content of the midpoint-home folder
 if [ -d "$midPoint_home_dir" ]; then
     marker_file="$midPoint_home_dir/$midPoint_instance_marker"
@@ -170,7 +170,7 @@ if [ -d "$midPoint_home_dir" ]; then
        [[ "$marker_midPoint_home_dir" != "$midPoint_home_dir" ]] || \
        [[ "$marker_midPoint_image_name" != "$midPoint_image_name" ]] || \
        [[ "$marker_midPoint_image_ver" != "$midPoint_image_ver" ]] || \
-       [[ "$marker_midPoint_label" != "$midPoint_label" ]]; then
+       [[ "$marker_midPoint_instance_hash" != "$midPoint_instance_hash" ]]; then
           cat <<EOF
 WARNING: Existing midpoint-home does not match this instance and proceeding to run this script here may result in overwriting an existing midPoint instance.
 Consider moving the script or using a different folder.
@@ -191,7 +191,7 @@ services:
   midpoint_data:
     image: postgres:16-alpine
     labels:
-      - ${midPoint_label}
+      - ${midPoint_instance_hash}
     environment:
       - POSTGRES_PASSWORD=db.secret.pw.007
       - POSTGRES_USER=midpoint
@@ -204,7 +204,7 @@ services:
   data_init:
     image: ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
     labels:
-      - ${midPoint_label}
+      - ${midPoint_instance_hash}
     command: >
       bash -c "
       cd /opt/midpoint ;
@@ -233,7 +233,7 @@ services:
   midpoint_server:
     image: ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
     labels:
-      - ${midPoint_label}
+      - ${midPoint_instance_hash}
     depends_on:
       data_init:
         condition: service_completed_successfully
@@ -260,12 +260,12 @@ networks:
   net:
     driver: bridge
     labels:
-      - ${midPoint_label}
+      - ${midPoint_instance_hash}
 
 volumes:
   midpoint_data:
     labels:
-      - ${midPoint_label}
+      - ${midPoint_instance_hash}
 
 EOF
 }
@@ -300,7 +300,7 @@ run_midPoint() {
 marker_midPoint_home_dir=$midPoint_home_dir
 marker_midPoint_image_name=$midPoint_image_name
 marker_midPoint_image_ver=$midPoint_image_ver
-marker_midPoint_label=$midPoint_label
+marker_midPoint_instance_hash=$midPoint_instance_hash
 EOF
 
       if [ -z "$midPoint_init_pwd" ]; then
@@ -310,14 +310,14 @@ EOF
         export MIDPOINT_ADMIN_PASSWORD="$midPoint_init_pwd"
       fi
 
-      get_docker_compose | docker compose -f - up -d --wait --force-recreate --renew-anon-volumes || { echo "ERROR: Failed to start containers." >&2; return 1; }
+      get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - up -d --wait --force-recreate --renew-anon-volumes || { echo "ERROR: Failed to start containers." >&2; return 1; }
   else
       echo "Existing installation - restarting midPoint..."
       if [ -n "$requested_pwd" ]; then
           echo "Password can be changed only in midPoint on existing installation. You can change it in midPoint in your Profile settings. If you wish to set a new password here, you need to reset midPoint to factory settings."
       fi
 
-      get_docker_compose | docker compose -f - up -d --force-recreate || { echo "ERROR: Failed to restart containers." >&2; return 1; }
+      get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - up -d --force-recreate || { echo "ERROR: Failed to restart containers." >&2; return 1; }
   fi
 
   echo
@@ -327,7 +327,7 @@ EOF
 
   if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
     container_name=$(docker ps \
-      --filter "label=${midPoint_label}" \
+      --filter "label=${midPoint_instance_hash}" \
       --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
       --format "{{.Names}}" | head -n1)
 
@@ -405,7 +405,7 @@ EOF
 
 show_logs() {
     container_name=$(docker ps \
-        --filter "label=${midPoint_label}" \
+        --filter "label=${midPoint_instance_hash}" \
         --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
         --format "{{.Names}}" | head -n1)
 
@@ -471,7 +471,7 @@ delete_db() {
     if [ -d "$midPoint_home_dir" ]; then
         running_port="$(get_running_port)"
 
-        get_docker_compose | docker compose -f - down --volumes
+        get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
 
         rm -rf "$midPoint_home_dir"
         echo "Database has been reset."
@@ -490,15 +490,15 @@ delete_db() {
 delete_midPoint() {
     echo "Removing current midPoint version"
 
-    get_docker_compose | docker compose -f - down --volumes
+    get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
 
-    docker ps -a --filter "label=${midPoint_label}" --format "{{.Names}}" | xargs -r docker rm
-    docker network ls --filter "label=${midPoint_label}" --format "{{.Name}}" | xargs -r docker network rm
-    docker volume ls --filter "label=${midPoint_label}" --format "{{.Name}}" | xargs -r docker volume rm
+    docker ps -a --filter "label=${midPoint_instance_hash}" --format "{{.Names}}" | xargs -r docker rm
+    docker network ls --filter "label=${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker network rm
+    docker volume ls --filter "label=${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker volume rm
 
     # handles error messages coming from docker image use overlapping by other midPoint instances
     local image_errors
-    image_errors=$(docker images --filter "label=${midPoint_label}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f 2>&1)
+    image_errors=$(docker images --filter "label=${midPoint_instance_hash}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f 2>&1)
     echo "$image_errors"
     image_errors+=$(docker images "${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" -q | xargs -r docker rmi -f 2>&1)
     image_errors+=$(docker images "postgres:16-alpine" -q | xargs -r docker rmi -f 2>&1)
@@ -517,7 +517,7 @@ delete_midPoint() {
 
 quit_midPoint() {
     echo "Shutting down midPoint..."
-    get_docker_compose | docker compose -f - down
+    get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down
     echo "Shut down complete."
     exit 0
 }
