@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# global variables setup
-# midPoint_base_dir="$(pwd)"
+##########################
+# global variables setup #
+##########################
 midPoint_base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 midPoint_instance_marker="instance_marker"
 midPoint_port=8080
@@ -22,7 +23,9 @@ midPoint_logo='
 
 '
 
-# helper functions - get_running_port, validate_pwd, get_pwd
+##############################################################
+# helper functions - get_running_port, validate_pwd, get_pwd #
+##############################################################
 get_running_port() {
     local port=$(docker ps \
     --filter "name=^${midPoint_instance_hash}" \
@@ -91,9 +94,11 @@ EOF
     fi
 }
 
-# global setup functions -  generate_instance_hash, get_port used in global variables
+#######################################################################################
+# global setup functions -  generate_instance_hash, get_port used in global variables #
+#######################################################################################
 generate_instance_hash() {
-    # condition used to ensure compatibility in MacOS
+    # the condition differentiating between hashing is used to ensure compatibility in MacOS
     if command -v sha256sum >/dev/null 2>&1; then
         hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
     else
@@ -132,7 +137,6 @@ get_port() {
         if [ "$requested_port" == "$running_port" ]; then
             echo "$requested_port"
             return 0
-        # elif lsof -i :"$requested_port" >/dev/null 2>&1; then
         # checking for the running port here is different to prevent false busy detection in TIME_WAIT/CLOSE_WAIT
         elif lsof -iTCP:"$requested_port" -sTCP:LISTEN >/dev/null 2>&1; then
             echo "Port $requested_port is busy, choose a different one" >&2
@@ -162,7 +166,9 @@ get_port() {
     return 1
 }
 
-# gatekeeper section - checking the presence and content of the midpoint-home folder
+######################################################################################
+# gatekeeper section - checking the presence and content of the midpoint-home folder #
+######################################################################################
 if [ -d "$midPoint_home_dir" ]; then
     marker_file="$midPoint_home_dir/$midPoint_instance_marker"
 
@@ -259,7 +265,9 @@ volumes:
 EOF
 }
 
-# core functions - run_midPoint, show_info, show_logs, show_compose_file, show_help, delete_db, delete_midPoint, quit_midPoint
+################################################################################################################################
+# core functions - run_midPoint, show_info, show_logs, show_compose_file, show_help, delete_db, delete_midPoint, quit_midPoint #
+################################################################################################################################
 run_midPoint() {
   local requested_port=""
   local requested_pwd=""
@@ -481,16 +489,10 @@ delete_midPoint() {
 
     get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
 
-    # docker ps -a --filter "name=^${midPoint_instance_hash}" --format "{{.Names}}" | xargs -r docker rm
-    # docker network ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker network rm
-    # docker volume ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker volume rm
-
-    # handles error messages coming from docker image use overlapping by other midPoint instances
+    # handles error messages coming from docker image use overlapping by other midPoint instances without error messages explaining why some images cannot be removed
     local image_errors
-    # image_errors=$(docker images --filter "label=${midPoint_instance_hash}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f 2>&1)
     image_errors+=$(docker images "${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" -q | xargs -r docker rmi -f 2>&1)
     image_errors+=$(docker images "postgres:16-alpine" -q | xargs -r docker rmi -f 2>&1)
-    # echo "$image_errors"
 
     if [ -d "$midPoint_home_dir" ]; then
         rm -rf "$midPoint_home_dir"
@@ -548,8 +550,9 @@ EOF
 
     delete_midPoint
 }
-
-# interface section
+#####################
+# interface section #
+#####################
 # basic GUI menu function
 show_default_menu() {
     echo "${midPoint_logo}"
@@ -585,10 +588,6 @@ EOF
 
 # advanced control args and default GUI menu function call for no arg case
 cmd="$1"
-if [ -n "$cmd" ]; then
-    shift
-fi
-
 requested_port=""
 requested_pwd=""
 
@@ -660,6 +659,6 @@ case "$cmd" in
         ;;
     *)
         echo "Invalid option"
-        exit 0
+        exit 1
         ;;
 esac
