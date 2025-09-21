@@ -25,7 +25,7 @@ midPoint_logo='
 # helper functions - get_running_port, validate_pwd, get_pwd
 get_running_port() {
     local port=$(docker ps \
-    --filter "label=${midPoint_instance_hash}" \
+    --filter "name=^${midPoint_instance_hash}" \
     --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
     --format "{{.Ports}}" | grep -oE '[0-9]+->8080/tcp' | head -n1 | cut -d'-' -f1)
 
@@ -190,8 +190,6 @@ cat <<EOF
 services:
   midpoint_data:
     image: postgres:16-alpine
-    labels:
-      - ${midPoint_instance_hash}
     environment:
       - POSTGRES_PASSWORD=db.secret.pw.007
       - POSTGRES_USER=midpoint
@@ -203,8 +201,6 @@ services:
 
   data_init:
     image: ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
-    labels:
-      - ${midPoint_instance_hash}
     command: >
       bash -c "
       cd /opt/midpoint ;
@@ -232,8 +228,6 @@ services:
 
   midpoint_server:
     image: ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
-    labels:
-      - ${midPoint_instance_hash}
     depends_on:
       data_init:
         condition: service_completed_successfully
@@ -259,14 +253,9 @@ services:
 networks:
   net:
     driver: bridge
-    labels:
-      - ${midPoint_instance_hash}
 
 volumes:
   midpoint_data:
-    labels:
-      - ${midPoint_instance_hash}
-
 EOF
 }
 
@@ -327,7 +316,7 @@ EOF
 
   if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
     container_name=$(docker ps \
-      --filter "label=${midPoint_instance_hash}" \
+      --filter "name=^${midPoint_instance_hash}" \
       --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
       --format "{{.Names}}" | head -n1)
 
@@ -405,7 +394,7 @@ EOF
 
 show_logs() {
     container_name=$(docker ps \
-        --filter "label=${midPoint_instance_hash}" \
+        --filter "name=^${midPoint_instance_hash}" \
         --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
         --format "{{.Names}}" | head -n1)
 
@@ -492,16 +481,16 @@ delete_midPoint() {
 
     get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
 
-    docker ps -a --filter "label=${midPoint_instance_hash}" --format "{{.Names}}" | xargs -r docker rm
-    docker network ls --filter "label=${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker network rm
-    docker volume ls --filter "label=${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker volume rm
+    docker ps -a --filter "name=^${midPoint_instance_hash}" --format "{{.Names}}" | xargs -r docker rm
+    docker network ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker network rm
+    docker volume ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker volume rm
 
     # handles error messages coming from docker image use overlapping by other midPoint instances
     local image_errors
-    image_errors=$(docker images --filter "label=${midPoint_instance_hash}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f 2>&1)
-    echo "$image_errors"
+    # image_errors=$(docker images --filter "label=${midPoint_instance_hash}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f 2>&1)
     image_errors+=$(docker images "${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" -q | xargs -r docker rmi -f 2>&1)
     image_errors+=$(docker images "postgres:16-alpine" -q | xargs -r docker rmi -f 2>&1)
+    # echo "$image_errors"
 
     if [ -d "$midPoint_home_dir" ]; then
         rm -rf "$midPoint_home_dir"
