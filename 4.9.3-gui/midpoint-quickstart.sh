@@ -481,9 +481,9 @@ delete_midPoint() {
 
     get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
 
-    docker ps -a --filter "name=^${midPoint_instance_hash}" --format "{{.Names}}" | xargs -r docker rm
-    docker network ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker network rm
-    docker volume ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker volume rm
+    # docker ps -a --filter "name=^${midPoint_instance_hash}" --format "{{.Names}}" | xargs -r docker rm
+    # docker network ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker network rm
+    # docker volume ls --filter "name=^${midPoint_instance_hash}" --format "{{.Name}}" | xargs -r docker volume rm
 
     # handles error messages coming from docker image use overlapping by other midPoint instances
     local image_errors
