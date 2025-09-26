@@ -616,6 +616,7 @@ while [ $# -gt 0 ]; do
             ;;
         *)
             echo "Unknown option: $1"
+            echo "Type --help to display basic commands."
             exit 1
             ;;
     esac
