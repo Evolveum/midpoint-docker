@@ -610,7 +610,7 @@ while [ $# -gt 0 ]; do
             requested_pwd="$2"
             shift 2
             ;;
-        start|info|logs|yaml|reset|delete|stop|help)
+        start|info|logs|yaml|reset|delete|stop|help|--help|-h)
             cmd="$1"
             shift
             ;;
@@ -630,7 +630,7 @@ case "$cmd" in
         show_info cli
         exit 0
         ;;
-    help)
+    help |--help|-h)
         show_help
         exit 0
         ;;
