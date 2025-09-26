@@ -630,7 +630,7 @@ case "$cmd" in
         show_info cli
         exit 0
         ;;
-    help |--help|-h)
+    help|--help|-h)
         show_help
         exit 0
         ;;
