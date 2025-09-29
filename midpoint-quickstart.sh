@@ -420,7 +420,7 @@ case ${1} in
 				echo "..."
 				tail -50 ${midPoint_home_dir}/log/midpoint.log
 				echo
-				echo "Midpoint did not start properly (e.g. version mismatch). This should not happend, try to clean and re-init the midPoint environment."
+				echo "Midpoint did not start properly (e.g., version mismatch). Try to clean and re-init the midPoint environment."
 			fi
 		fi
 		;;
