@@ -23,12 +23,35 @@ midPoint_logo='
 
 '
 
+######################################################################################
+# gatekeeper section - checking the presence and content of the midpoint-home folder #
+######################################################################################
+if [ -d "$midPoint_home_dir" ]; then
+    marker_file="$midPoint_home_dir/$midPoint_instance_marker"
+
+    if [ ! -f "$marker_file" ] || ! source "$marker_file" || \
+       [[ "$marker_midPoint_home_dir" != "$midPoint_home_dir" ]] || \
+       [[ "$marker_midPoint_image_name" != "$midPoint_image_name" ]] || \
+       [[ "$marker_midPoint_image_ver" != "$midPoint_image_ver" ]]; then
+          cat <<EOF
+WARNING: Existing midpoint-home does not match this instance and proceeding to run this script here may result in overwriting an existing midPoint instance.
+Consider moving the script or using a different folder.
+EOF
+        read -r -p "Do you want to proceed in your current folder anyway? (y/N) " choice
+        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
+        if [[ "$choice" != "y" ]]; then
+            echo "Aborted."
+            exit 1
+        fi
+    fi
+fi
+
 ##############################################################
 # helper functions - get_running_port, validate_pwd, get_pwd #
 ##############################################################
 get_running_port() {
     local port=$(docker ps \
-    --filter "name=^${midPoint_instance_hash}" \
+    --filter "name=^${midPoint_instance_name}" \
     --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
     --format "{{.Ports}}" | grep -oE '[0-9]+->8080/tcp' | head -n1 | cut -d'-' -f1)
 
@@ -94,9 +117,10 @@ EOF
     fi
 }
 
-#######################################################################################
-# global setup functions -  generate_instance_hash, get_port used in global variables #
-#######################################################################################
+##################################################################################
+# global setup functions -  get_instance_name, get_port used in global variables #
+##################################################################################
+# this function is obsolete
 generate_instance_hash() {
     # the condition differentiating between hashing is used to ensure compatibility in MacOS
     if command -v sha256sum >/dev/null 2>&1; then
@@ -107,7 +131,36 @@ generate_instance_hash() {
     echo "mid${hash:0:32}"
 }
 
-midPoint_instance_hash="$(generate_instance_hash)"
+get_instance_name() {
+      local requested_instance_name=$1
+      local marker_file="${midPoint_home_dir}/${midPoint_instance_marker}"
+
+      if [ -f "$marker_file" ]; then
+        source "$marker_file"
+        echo "$marker_midPoint_instance_name"
+        return 0
+      fi
+
+      if [ -n "$requested_instance_name" ]; then
+          if [[ "$requested_instance_name" =~ ^[a-z0-9][a-z0-9_-]{0,249}$ ]]; then
+              echo "$requested_instance_name"
+          else
+              if [[ ! "$requested_instance_name" =~ ^[a-z0-9] ]]; then
+                  echo "The first character must be a lowercase letter or a number." >&2
+              elif [[ "$requested_instance_name" =~ [A-Z] ]]; then
+                  echo "The instance name cannot use uppercase letters." >&2
+              elif [[ "$requested_instance_name" =~ [^a-z0-9_-] ]]; then
+                  echo "The instance name can only use lowercase letters, numbers, hyphen, or underscore; no spaces or other characters are allowed." >&2
+              fi
+              return 1
+          fi
+      else
+          random_hash="$(dd if=/dev/urandom bs=64 count=4 2>/dev/null | base64 | tr -d '/=+' | tr '[:upper:]' '[:lower:]' | tr -dc 'a-z0-9' | cut -c1-12)"
+          echo "midpoint-quickstart-${random_hash}"
+      fi
+}
+
+midPoint_instance_name="$(get_instance_name)"
 
 get_port() {
     local requested_port="$1"
@@ -165,30 +218,6 @@ get_port() {
     echo "No available port found between $default_start and $max_port" >&2
     return 1
 }
-
-######################################################################################
-# gatekeeper section - checking the presence and content of the midpoint-home folder #
-######################################################################################
-if [ -d "$midPoint_home_dir" ]; then
-    marker_file="$midPoint_home_dir/$midPoint_instance_marker"
-
-    if [ ! -f "$marker_file" ] || ! source "$marker_file" || \
-       [[ "$marker_midPoint_home_dir" != "$midPoint_home_dir" ]] || \
-       [[ "$marker_midPoint_image_name" != "$midPoint_image_name" ]] || \
-       [[ "$marker_midPoint_image_ver" != "$midPoint_image_ver" ]] || \
-       [[ "$marker_midPoint_instance_hash" != "$midPoint_instance_hash" ]]; then
-          cat <<EOF
-WARNING: Existing midpoint-home does not match this instance and proceeding to run this script here may result in overwriting an existing midPoint instance.
-Consider moving the script or using a different folder.
-EOF
-        read -r -p "Do you want to proceed in your current folder anyway? (y/N) " choice
-        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
-        if [[ "$choice" != "y" ]]; then
-            echo "Aborted."
-            exit 1
-        fi
-    fi
-fi
 
 # setup YAML function (not saved into any file)
 get_docker_compose() {
@@ -271,23 +300,30 @@ EOF
 run_midPoint() {
   local requested_port=""
   local requested_pwd=""
+  local requested_instance_name=""
 
   for arg in "$@"; do
     case $arg in
         port=*) requested_port="${arg#*=}" ;;
         password=*) requested_pwd="${arg#*=}" ;;
+        name=*) requested_instance_name="${arg#*=}" ;;
         *) echo "Unknown option $arg"; return 1 ;;
     esac
   done
 
-  if [ -n "$requested_port" ]; then
-      midPoint_port="$(get_port "$requested_port")" || return 1
-  else
-      midPoint_port="$(get_port)" || return 1
-  fi
+# check later if it is necessary - possibly call get_port with empty argument
+  # if [ -n "$requested_port" ]; then
+  #     midPoint_port="$(get_port "$requested_port")" || return 1
+  # else
+  #     midPoint_port="$(get_port)" || return 1
+  # fi
+
+  midPoint_port="$(get_port "$requested_port")" || return 1
 
   if [ ! -d "$midPoint_home_dir" ]; then
       get_pwd "$requested_pwd" || return 1
+
+      midPoint_instance_name="$(get_instance_name "$requested_instance_name")" || return 1
 
       echo "Fresh installation  -  creating home folder and setting up midPoint..."
       mkdir -p "$midPoint_home_dir" || { echo "ERROR: Failed to create $midPoint_home_dir" >&2; return 1; }
@@ -297,7 +333,7 @@ run_midPoint() {
 marker_midPoint_home_dir=$midPoint_home_dir
 marker_midPoint_image_name=$midPoint_image_name
 marker_midPoint_image_ver=$midPoint_image_ver
-marker_midPoint_instance_hash=$midPoint_instance_hash
+marker_midPoint_instance_name=$midPoint_instance_name
 EOF
 
       if [ -z "$midPoint_init_pwd" ]; then
@@ -307,14 +343,14 @@ EOF
         export MIDPOINT_ADMIN_PASSWORD="$midPoint_init_pwd"
       fi
 
-      get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - up -d --wait --force-recreate --renew-anon-volumes || { echo "ERROR: Failed to start containers." >&2; return 1; }
+      get_docker_compose | docker compose -p "$midPoint_instance_name" -f - up -d --wait --force-recreate --renew-anon-volumes || { echo "ERROR: Failed to start containers." >&2; return 1; }
   else
       echo "Existing installation - restarting midPoint..."
       if [ -n "$requested_pwd" ]; then
           echo "Password can be changed only in midPoint on existing installation. You can change it in midPoint in your Profile settings. If you wish to set a new password here, you need to reset midPoint to factory settings."
       fi
 
-      get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - up -d --force-recreate || { echo "ERROR: Failed to restart containers." >&2; return 1; }
+      get_docker_compose | docker compose -p "$midPoint_instance_name" -f - up -d --force-recreate || { echo "ERROR: Failed to restart containers." >&2; return 1; }
   fi
 
   echo
@@ -324,7 +360,7 @@ EOF
 
   if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
     container_name=$(docker ps \
-      --filter "name=^${midPoint_instance_hash}" \
+      --filter "name=^${midPoint_instance_name}" \
       --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
       --format "{{.Names}}" | head -n1)
 
@@ -402,7 +438,7 @@ EOF
 
 show_logs() {
     container_name=$(docker ps \
-        --filter "name=^${midPoint_instance_hash}" \
+        --filter "name=^${midPoint_instance_name}" \
         --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
         --format "{{.Names}}" | head -n1)
 
@@ -448,7 +484,8 @@ Usage: $(basename "$0") [OPTION]
 Option:
   start     Start midPoint using Docker Compose; takes 2 optional keyword arguments:
               --port (-p)       Select port number (up to 65535) on which midPoint will run;
-              --password (-w)    set initial password for midPoint (works only on initial start, otherwise is ignored)
+              --password (-w)   Set initial password for midPoint (works only on initial start, otherwise is ignored)
+              --name (-n)       Set name of the project for docker containers, volumes and network. 
   info      Show version, image, and environment details
   yaml      Print the Docker Compose YAML used internally by this script; the file is not saved in the environment
   logs      Display logs of the running midPoint container; press 'B' to stop the logs
@@ -468,14 +505,14 @@ delete_db() {
     if [ -d "$midPoint_home_dir" ]; then
         running_port="$(get_running_port)"
 
-        get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
+        get_docker_compose | docker compose -p "$midPoint_instance_name" -f - down --volumes
 
         rm -rf "$midPoint_home_dir"
         echo "Database has been reset."
 
         if [ -n "$running_port" ]; then
           echo "midPoint will now restart automatically."
-          run_midPoint port="$running_port"
+          run_midPoint port="$running_port" name="$midPoint_instance_name"
         else
           echo "midPoint can now be started again."
         fi
@@ -487,7 +524,7 @@ delete_db() {
 delete_midPoint() {
     echo "Removing current midPoint version"
 
-    get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down --volumes
+    get_docker_compose | docker compose -p "$midPoint_instance_name" -f - down --volumes
 
     # handles error messages coming from docker image use overlapping by other midPoint instances without error messages explaining why some images cannot be removed
     local image_errors
@@ -508,7 +545,7 @@ delete_midPoint() {
 
 quit_midPoint() {
     echo "Shutting down midPoint..."
-    get_docker_compose | docker compose -p "$midPoint_instance_hash" -f - down
+    get_docker_compose | docker compose -p "$midPoint_instance_name" -f - down
     echo "Shut down complete."
     exit 0
 }
@@ -590,6 +627,7 @@ EOF
 cmd="$1"
 requested_port=""
 requested_pwd=""
+requested_instance_name=""
 
 # proprietary parsing used instead of getopt to ensure consistent working in MacOS default bash BSD version
 while [ $# -gt 0 ]; do
@@ -610,6 +648,14 @@ while [ $# -gt 0 ]; do
             requested_pwd="$2"
             shift 2
             ;;
+        --name|-n)
+            if [ -z "$2" ] || [[ "$2" == -* ]]; then
+                echo "Error: --name requires a value, e.g. --name midpoint-instance"
+                exit 1
+            fi
+            requested_instance_name="$2"
+            shift 2
+            ;;
         start|info|logs|yaml|reset|delete|stop|help|--help|-h)
             cmd="$1"
             shift
@@ -624,7 +670,7 @@ done
 
 case "$cmd" in
     start)
-        run_midPoint "port=$requested_port" "password=$requested_pwd"
+        run_midPoint "port=$requested_port" "password=$requested_pwd" "name=$requested_instance_name"
         exit 0
         ;;
     info)
