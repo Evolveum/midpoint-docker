@@ -124,44 +124,44 @@ EOF
 ##################################################################################
 # global setup functions -  get_instance_name, get_port used in global variables #
 ##################################################################################
-# # this function is obsolete
-# generate_instance_hash() {
-#     # the condition differentiating between hashing is used to ensure compatibility in MacOS
-#     if command -v sha256sum >/dev/null 2>&1; then
-#         hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
-#     else
-#         hash=$(echo -n "$midPoint_base_dir" | shasum -a 256 | awk '{print $1}')
-#     fi
-#     echo "mid${hash:0:32}"
-# }
-
 get_instance_name() {
-      local requested_instance_name=$1
-      local marker_file="${midPoint_home_dir}/${midPoint_instance_marker}"
+    local requested_instance_name=$1
+    local marker_file="${midPoint_home_dir}/${midPoint_instance_marker}"
+    local existing_containers=($(docker ps --format "{{.Names}}"))
 
-      if [ -f "$marker_file" ]; then
-        source "$marker_file"
-        echo "$marker_midPoint_instance_name"
-        return 0
-      fi
+    if [ -f "$marker_file" ]; then
+      source "$marker_file"
+      echo "$marker_midPoint_instance_name"
+      return 0
+    fi
 
-      if [ -n "$requested_instance_name" ]; then
-          if [[ "$requested_instance_name" =~ ^[a-z0-9][a-z0-9_-]{0,249}$ ]]; then
-              echo "$requested_instance_name"
-          else
-              if [[ ! "$requested_instance_name" =~ ^[a-z0-9] ]]; then
-                  echo "The first character must be a lowercase letter or a number." >&2
-              elif [[ "$requested_instance_name" =~ [A-Z] ]]; then
-                  echo "The instance name cannot use uppercase letters." >&2
-              elif [[ "$requested_instance_name" =~ [^a-z0-9_-] ]]; then
-                  echo "The instance name can only use lowercase letters, numbers, hyphen, or underscore; no spaces or other characters are allowed." >&2
-              fi
-              return 1
-          fi
-      else
-          random_hash="$(dd if=/dev/urandom bs=64 count=4 2>/dev/null | base64 | tr -d '/=+' | tr '[:upper:]' '[:lower:]' | tr -dc 'a-z0-9' | cut -c1-12)"
-          echo "midpoint-quickstart-${random_hash}"
-      fi
+    if [ -n "$requested_instance_name" ]; then
+        if [[ "$requested_instance_name" =~ ^[a-z0-9][a-z0-9_-]{0,249}$ ]]; then
+            if printf '%s\n' "${existing_containers[@]}" | grep -q "^${requested_instance_name}-"; then
+                echo "Instance name '$requested_instance_name' already exists as a Docker container." >&2
+                return 1
+            fi
+            echo "$requested_instance_name"
+        else
+            if [[ ! "$requested_instance_name" =~ ^[a-z0-9] ]]; then
+                echo "The first character of instance name must be a lowercase letter or a number." >&2
+            elif [[ "$requested_instance_name" =~ [A-Z] ]]; then
+                echo "The instance name cannot use uppercase letters." >&2
+            elif [[ "$requested_instance_name" =~ [^a-z0-9_-] ]]; then
+                echo "The instance name can only use lowercase letters, numbers, hyphen, or underscore; no spaces or other characters are allowed." >&2
+            fi
+            return 1
+        fi
+    else
+        while true; do
+            random_hash="$(dd if=/dev/urandom bs=64 count=4 2>/dev/null | base64 | tr -d '/=+' | tr '[:upper:]' '[:lower:]' | tr -dc 'a-z0-9' | cut -c1-6)"
+            random_instance_name="midpoint-quickstart-${random_hash}"
+            if ! printf '%s\n' "${existing_containers[@]}" | grep -q "^${random_instance_name}-"; then
+                echo "$random_instance_name"
+                break
+            fi
+        done
+    fi
 }
 
 midPoint_instance_name="$(get_instance_name)"
@@ -315,13 +315,6 @@ run_midPoint() {
     esac
   done
 
-# check later if it is necessary - possibly call get_port with empty argument
-  # if [ -n "$requested_port" ]; then
-  #     midPoint_port="$(get_port "$requested_port")" || return 1
-  # else
-  #     midPoint_port="$(get_port)" || return 1
-  # fi
-
   midPoint_port="$(get_port "$requested_port")" || return 1
 
   if [ ! -d "$midPoint_home_dir" ]; then
@@ -427,6 +420,10 @@ Home folder:   ${midPoint_base_dir}/${midPoint_home_dir}
 Import folder: ${midPoint_base_dir}/${midPoint_home_dir}/import
 Logs folder:   ${midPoint_base_dir}/${midPoint_home_dir}/logs
 
+Instance name: ${midPoint_instance_name}
+Server container: ${midPoint_instance_name}-midpoint_server-1
+Database container: ${midPoint_instance_name}-midpoint_data-1
+
 Web GUI: http://localhost:${midPoint_port}/midpoint/
 Username: administrator
 Password set during first start of midPoint; if it was lost, reset midPoint to generate a new one.
@@ -493,7 +490,7 @@ Option:
   start     Start midPoint using Docker Compose; takes 2 optional keyword arguments:
               --port (-p)       Select port number (up to 65535) on which midPoint will run;
               --password (-w)   Set initial password for midPoint (works only on initial start, otherwise is ignored)
-              --name (-n)       Set name of the project for docker containers, volumes and network. 
+              --name (-n)       Set name of the project for docker containers, volumes and network (works only on initial start, otherwise is ignored)
   info      Show version, image, and environment details
   yaml      Print the Docker Compose YAML used internally by this script; the file is not saved in the environment
   logs      Display logs of the running midPoint container; press 'B' to stop the logs
@@ -598,7 +595,7 @@ EOF
 #####################
 # interface section #
 #####################
-# basic GUI menu function
+# default GUI menu function
 show_default_menu() {
     echo "${midPoint_logo}"
     while true; do
