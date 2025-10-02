@@ -39,7 +39,10 @@ Consider moving the script or using a different folder.
 EOF
         read -r -p "Do you want to proceed in your current folder anyway? (y/N) " choice
         choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
-        if [[ "$choice" != "y" ]]; then
+        if [[ "$choice" == "y" ]]; then
+            echo "This script will overwrite the data of the previous midPoint instance that ran from this folder."
+            rm -rf "$midPoint_home_dir"
+        else
             echo "Aborted."
             exit 1
         fi
@@ -58,9 +61,10 @@ get_running_port() {
     echo "${port:-}"
 }
 
-# regex used to comply with midPoint to avoid clashes coming from midPoint
 validate_pwd() {
   local tested_pwd=$1
+
+  # regex used to comply with midPoint to avoid clashes coming from midPoint
   if [[ ${#tested_pwd} -lt 8 ]]; then
       echo "Your password needs to be at least 8 characters long."
       return 1
@@ -120,16 +124,16 @@ EOF
 ##################################################################################
 # global setup functions -  get_instance_name, get_port used in global variables #
 ##################################################################################
-# this function is obsolete
-generate_instance_hash() {
-    # the condition differentiating between hashing is used to ensure compatibility in MacOS
-    if command -v sha256sum >/dev/null 2>&1; then
-        hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
-    else
-        hash=$(echo -n "$midPoint_base_dir" | shasum -a 256 | awk '{print $1}')
-    fi
-    echo "mid${hash:0:32}"
-}
+# # this function is obsolete
+# generate_instance_hash() {
+#     # the condition differentiating between hashing is used to ensure compatibility in MacOS
+#     if command -v sha256sum >/dev/null 2>&1; then
+#         hash=$(echo -n "$midPoint_base_dir" | sha256sum | awk '{print $1}')
+#     else
+#         hash=$(echo -n "$midPoint_base_dir" | shasum -a 256 | awk '{print $1}')
+#     fi
+#     echo "mid${hash:0:32}"
+# }
 
 get_instance_name() {
       local requested_instance_name=$1
@@ -348,6 +352,10 @@ EOF
       echo "Existing installation - restarting midPoint..."
       if [ -n "$requested_pwd" ]; then
           echo "Password can be changed only in midPoint on existing installation. You can change it in midPoint in your Profile settings. If you wish to set a new password here, you need to reset midPoint to factory settings."
+      fi
+
+      if [ -n "$requested_instance_name" ]; then
+          echo "Name of the project cannot be changed on existing installation. If you wish to change it, you need to delete this instance and start a new one."
       fi
 
       get_docker_compose | docker compose -p "$midPoint_instance_name" -f - up -d --force-recreate || { echo "ERROR: Failed to restart containers." >&2; return 1; }
