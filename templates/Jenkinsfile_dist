@@ -15,7 +15,7 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
     ),
     containerTemplate(
         name: "kubectl",
-        image: "bitnami/kubectl:1.19.4",
+        image: "bitnamilegacy/kubectl:1.19.4",
         command: 'cat',
         runAsUser: '0',
         ttyEnabled: true,
