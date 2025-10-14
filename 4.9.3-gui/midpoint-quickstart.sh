@@ -392,18 +392,18 @@ show_info() {
 
 Dual-licensed under Apache License 2.0 and European Union Public License.
 
-Version: ${midPoint_image_ver}
-Image:   ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
+Version:                        ${midPoint_image_ver}
+Image:                          ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
 EOF
 
 if [[ "$caller" == "cli" ]]; then
-  echo "Sources: https://github.com/Evolveum/midpoint"
+  echo "Sources:                        https://github.com/Evolveum/midpoint"
 fi
 
 cat << EOF
-Bug reporting system: https://support.evolveum.com/
-Product information: https://midpoint.evolveum.com
-Documentation: https://docs.evolveum.com/midpoint/quickstart/
+Bug reporting system:           https://support.evolveum.com/
+Product information:            https://midpoint.evolveum.com
+Documentation:                  https://docs.evolveum.com/midpoint/quickstart/
 
 EOF
 
@@ -416,16 +416,18 @@ EOF
 
   if [ -d "$midPoint_home_dir" ]; then
         cat << EOF
-Home folder:   ${midPoint_base_dir}/${midPoint_home_dir}
-Import folder: ${midPoint_base_dir}/${midPoint_home_dir}/import
-Logs folder:   ${midPoint_base_dir}/${midPoint_home_dir}/logs
+Home folder:                    ${midPoint_base_dir}/${midPoint_home_dir}/
+Import folder:                  ${midPoint_base_dir}/${midPoint_home_dir}/import/
+Logs folder:                    ${midPoint_base_dir}/${midPoint_home_dir}/logs/
 
-Instance name: ${midPoint_instance_name}
-Server container: ${midPoint_instance_name}-midpoint_server-1
-Database container: ${midPoint_instance_name}-midpoint_data-1
+Import path in midPoint:        /opt/midpoint/var/import/
 
-Web GUI: http://localhost:${midPoint_port}/midpoint/
-Username: administrator
+Instance name:                  ${midPoint_instance_name}
+Server container:               ${midPoint_instance_name}-midpoint_server-1
+Database container:             ${midPoint_instance_name}-midpoint_data-1
+
+Web GUI:                        http://localhost:${midPoint_port}/midpoint/
+Username:                       administrator
 Password set during first start of midPoint; if it was lost, reset midPoint to generate a new one.
 
 EOF
