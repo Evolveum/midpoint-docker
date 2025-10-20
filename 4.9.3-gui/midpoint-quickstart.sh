@@ -318,9 +318,9 @@ run_midPoint() {
   midPoint_port="$(get_port "$requested_port")" || return 1
 
   if [ ! -d "$midPoint_home_dir" ]; then
-      get_pwd "$requested_pwd" || return 1
-
       midPoint_instance_name="$(get_instance_name "$requested_instance_name")" || return 1
+      
+      get_pwd "$requested_pwd" || return 1
 
       echo "Fresh installation  -  creating home folder and setting up midPoint..."
       mkdir -p "$midPoint_home_dir" || { echo "ERROR: Failed to create $midPoint_home_dir" >&2; return 1; }
