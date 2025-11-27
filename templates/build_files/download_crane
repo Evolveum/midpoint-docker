@@ -1,3 +1,16 @@
 #!/bin/sh
 set -x
-wget -O - $(wget -O - https://github.com/google/go-containerregistry/releases | grep Linux_${1:-x86_64}.tar.gz | grep "<a href" | sed "s/[^\"]*\"\([^\"]*\)\".*/https:\/\/github.com\1/") | tar -xvzC /usr/local/bin crane
+
+unset download
+
+download=$(wget -O - https://github.com/google/go-containerregistry/releases | grep Linux_${1:-x86_64}.tar.gz | grep "<a href" | sed "s/[^\"]*\"\([^\"]*\)\".*/https:\/\/github.com\1/")
+
+if [ "${download}" == "" ]
+then
+	download=$(wget -O - https://github.com/google/go-containerregistry/releases | grep Linux_${1:-i386}.tar.gz | grep "<a href" | sed "s/[^\"]*\"\([^\"]*\)\".*/https:\/\/github.com\1/")
+fi
+
+if [ "${download}" != "" ]
+then
+	wget -O - "${download}}" | tar -xvzC /usr/local/bin crane
+fi
