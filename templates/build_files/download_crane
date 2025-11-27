@@ -12,5 +12,5 @@ fi
 
 if [ "${download}" != "" ]
 then
-	wget -O - "${download}}" | tar -xvzC /usr/local/bin crane
+	wget -O - "${download}" | tar -xvzC /usr/local/bin crane
 fi
