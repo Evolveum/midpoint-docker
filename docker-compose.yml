@@ -54,7 +54,6 @@ services:
      - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
      - MP_SET_midpoint_repository_jdbcUrl=jdbc:postgresql://midpoint_data:5432/midpoint
      - MP_SET_midpoint_repository_database=postgresql
-     - MP_SET_midpoint_administrator_initialPassword=Test5ecr3t
      - MP_UNSET_midpoint_repository_hibernateHbm2ddl=1
      - MP_NO_ENV_COMPAT=1
     networks:
