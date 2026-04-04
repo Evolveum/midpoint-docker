@@ -3,6 +3,10 @@ ARG base_image_tag=latest
 
 FROM ${base_image}:${base_image_tag}
 
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+
 COPY templates/build_files/download_crane /opt/download_crane
 
 COPY templates/build_files/prepare_layer /usr/local/bin/prepare_layer

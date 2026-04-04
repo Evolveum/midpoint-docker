@@ -2,7 +2,7 @@
 app="docker"
 repo="midpoint"
 template_prefix="template"
-registry="registry.lab.evolveum.com"
+registry="registry.evolveum.com/internal"
 base_image=alpine
 base_image_tag=latest
 JAVA_VERSION=21

@@ -1,9 +1,9 @@
 def repoName = params.REPOSITORY_NAME ?: 'midpoint'
-def templateReg = params.TEMPLATE_REGISTRY ?: 'registry.lab.evolveum.com'
+def templateReg = params.TEMPLATE_REGISTRY ?: 'registry.evolveum.com/internal'
 def finalReg = params.REGISTRY ?: 'evolveum'
 def skipNativeTest = params.SKIP_NATIVE ?: false
 def skipH2Test = params.SKIP_H2 ?: false
-podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
+podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, serviceAccount: 'jenkins', containers: [
     containerTemplate(
         name: "jnlp", 
         image: "jenkins/inbound-agent:4.13-2-alpine-jdk11", 
@@ -16,7 +16,7 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
     containerTemplate(
         name: "kubectl",
         image: "alpine:3.22",
-        command: 'sh -c "apk add --no-cache bash curl kubectl=~1.33 && cat"',
+        command: 'sh -c "apk add --no-cache bash curl kubectl=~1.33 && curl -sL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar xzf - -C /usr/local/bin crane && cat"',
         runAsUser: '0',
         ttyEnabled: true,
     ),
@@ -24,181 +24,22 @@ podTemplate(activeDeadlineSeconds: 7200, idleMinutes: 1, containers: [
     node(POD_LABEL) {
         stage ("create environment") {
             container ("kubectl") {
-                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
-                        serverUrl: 'https://10.100.1.42:6443',
-                        contextName: 'jenkins',
-                        clusterName: 'kubernetes',
-                        namespace: 'jenkins'
-                        ]) {
                     try {
                         sh """#!/bin/bash
 #timestamp="\$(date +%s)-${JOB_NAME}-${BUILD_NUMBER}"
 timestamp="${JOB_NAME}-${BUILD_NUMBER}"
 echo \${timestamp} >timestamp
 mkdir logs-\${timestamp}
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Service
-metadata:
-  name: docker-reg-\${timestamp}
-  namespace: jenkins
-spec:
-  ports:
-    - name: registry
-      protocol: TCP
-      port: 5000
-      targetPort: 5000
-  selector:
-    app: docker-reg-\${timestamp}
-  type: ClusterIP
-  sessionAffinity: None
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: docker-registry-\${timestamp}
-  namespace: jenkins
-  annotations:
-    kubernetes.io/ingress.class: haproxy
-spec:
-  tls:
-    - hosts:
-        - registry-\${timestamp}.lab.evolveum.com
-      secretName: cert-lab-evolveum
-  rules:
-    - host: registry-\${timestamp}.lab.evolveum.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: docker-reg-\${timestamp}
-                port:
-                  number: 5000
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: docker-reg-\${timestamp}-config
-  namespace: jenkins
-data:
-  config.yml: |-
-    health:
-      storagedriver:
-        enabled: true
-        interval: 10s
-        threshold: 3
-    http:
-      addr: :5000
-      headers:
-        X-Content-Type-Options:
-        - nosniff
-    log:
-      fields:
-        service: registry
-    storage:
-      delete:
-        enabled: true
-      cache:
-        blobdescriptor: inmemory
-    version: 0.1
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: docker-reg-\${timestamp}-secret
-  namespace: jenkins
-data:
-  haSharedSecret: Z2d5bnBzUWdwcXFWOXB2dw==
-type: Opaque
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: docker-reg-\${timestamp}
-  namespace: jenkins
-  labels:
-    app: docker-reg-\${timestamp}
-spec:
-  volumes:
-    - name: data
-      emptyDir: {}
-    - name: docker-reg-\${timestamp}-config
-      configMap:
-        name: docker-reg-\${timestamp}-config
-        defaultMode: 420
-  containers:
-    - name: docker-registry
-      image: registry:2.8.1
-      command:
-        - /bin/registry
-        - serve
-        - /etc/docker/registry/config.yml
-      ports:
-        - containerPort: 5000
-          protocol: TCP
-      env:
-        - name: REGISTRY_HTTP_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: docker-reg-\${timestamp}-secret
-              key: haSharedSecret
-        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
-          value: /var/lib/registry
-      volumeMounts:
-        - name: data
-          mountPath: /var/lib/registry/
-        - name: docker-reg-\${timestamp}-config
-          mountPath: /etc/docker/registry
-      livenessProbe:
-        httpGet:
-          path: /
-          port: 5000
-          scheme: HTTP
-        timeoutSeconds: 1
-        periodSeconds: 10
-        successThreshold: 1
-        failureThreshold: 3
-      readinessProbe:
-        httpGet:
-          path: /
-          port: 5000
-          scheme: HTTP
-        timeoutSeconds: 1
-        periodSeconds: 10
-        successThreshold: 1
-        failureThreshold: 3
-      imagePullPolicy: IfNotPresent
-  securityContext:
-    runAsUser: 1000
-    fsGroup: 1000
-EOF
-echo "Waiting to get registry ready..."
-http=\$(curl -I -L -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | head -n 1 | cut -d " " -f 2 )
-while [ \${http} -eq 404 -o \${http} -eq 503 ]
-do
-    sleep 2
-    http=\$(curl -I -L -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | head -n 1 | cut -d " " -f 2 )
-done
-echo "Registry is ready... (\${http})"
-curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog
+echo "Using Harbor registry ${templateReg} as staging..."
                         """
                     } catch (err) {
                         echo "Caught: ${err}"
                         unstable 'Error during envvironment initialization'
                     }
-                }
             }
         }
         stage ("build image") {
             container ("kubectl") {
-                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
-                        serverUrl: 'https://10.100.1.42:6443',
-                        contextName: 'jenkins',
-                        clusterName: 'kubernetes',
-                        namespace: 'jenkins'
-                        ]) {
                     try {
                         sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
@@ -209,14 +50,28 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: docker-image-build-\${timestamp}
-  namespace: jenkins
+  namespace: jenkins-legacy
 spec:
+  imagePullSecrets:
+    - name: harbor-pull-internal
   containers:
     - name: docker-image-build
       image: ${templateReg}/${repoName}:build-alpine
       command: [ "/bin/bash", "-c" ]
+      env:
+        - name: HARBOR_USER
+          valueFrom:
+            secretKeyRef:
+              name: harbor-robot-internal-jenkins
+              key: username
+        - name: HARBOR_PASS
+          valueFrom:
+            secretKeyRef:
+              name: harbor-robot-internal-jenkins
+              key: password
       args:
-        - cd /opt/midpoint ;
+        - crane auth login registry.evolveum.com -u "\\\${HARBOR_USER}" -p "\\\${HARBOR_PASS}" ;
+          cd /opt/midpoint ;
           ./download-midpoint ${DOCKERTAG} midpoint.tar.gz ;
           overallFound=0 ;
           /usr/local/bin/prepare_layer midpoint.tar.gz ${DOCKERTAG} ;
@@ -236,8 +91,8 @@ spec:
           if [ \\\$(grep \"^template-\\\${s}-${JAVAVER}-\\\${i}\\\$\" image_list | wc -l) -eq 1 ] ;
           then
           echo \"Found match - Base OS \\\${i} & Java version ${JAVAVER} @ \\\${s}\" ;
-          echo -n \" -m registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i}\" >>combine_command ;
-          /usr/local/bin/crane append -b ${templateReg}/${repoName}:template-\\\${s}-${JAVAVER}-\\\${i} -f midpoint-opt-${DOCKERTAG}.tar -t registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i} ;
+          echo -n \" -m ${templateReg}/${repoName}:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i}\" >>combine_command ;
+          /usr/local/bin/crane append -b ${templateReg}/${repoName}:template-\\\${s}-${JAVAVER}-\\\${i} -f midpoint-opt-${DOCKERTAG}.tar -t ${templateReg}/${repoName}:build-${DOCKERTAG}-\\\${s}-${JAVAVER}-\\\${i} ;
           found=1 ; overallFound=1;
           break;
           fi ;
@@ -246,37 +101,34 @@ spec:
           echo \".\";
           done ;
           echo ;
-          echo -n \" -t registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}\" >>combine_command ;
+          echo -n \" -t ${templateReg}/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}\" >>combine_command ;
           cat combine_command ;
           echo ;
           if [ \\\${overallFound} -eq 1 ] ; then /bin/bash combine_command ; fi ;
           echo
-          /usr/local/bin/crane catalog registry-\${timestamp}.lab.evolveum.com ;
+          /usr/local/bin/crane ls ${templateReg}/${repoName} ;
           echo ;
-          /usr/local/bin/crane ls registry-\${timestamp}.lab.evolveum.com/${repoName} ;
-          echo ;
-          /usr/local/bin/crane manifest registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} ;
+          /usr/local/bin/crane manifest ${templateReg}/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} ;
           if [ \\\${overallFound} -eq 0 ] ; then exit 123 ; fi ;
       imagePullPolicy: Always 
   restartPolicy: Never
 EOF
 echo "Waiting to finish the process of the image build..."
-status=\$(kubectl get -n jenkins pod/docker-image-build-\${timestamp} -o=jsonpath="{.status.phase}")
+status=\$(kubectl get -n jenkins-legacy pod/docker-image-build-\${timestamp} -o=jsonpath="{.status.phase}")
 while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
 do
     sleep 15
-    status=\$(kubectl get -n jenkins pod/docker-image-build-\${timestamp} -o=jsonpath="{.status.phase}")
-    echo "Log contain \$(kubectl logs -n jenkins docker-image-build-\${timestamp} | wc -l) lines..."
+    status=\$(kubectl get -n jenkins-legacy pod/docker-image-build-\${timestamp} -o=jsonpath="{.status.phase}")
+    echo "Log contain \$(kubectl logs -n jenkins-legacy docker-image-build-\${timestamp} | wc -l) lines..."
 done
-kubectl logs -n jenkins docker-image-build-\${timestamp} > logs-\${timestamp}/build-image.log 
-kubectl delete -n jenkins pod/docker-image-build-\${timestamp}
+kubectl logs -n jenkins-legacy docker-image-build-\${timestamp} > logs-\${timestamp}/build-image.log
+kubectl delete -n jenkins-legacy pod/docker-image-build-\${timestamp}
 cat logs-\${timestamp}/build-image.log 
                     """
                     } catch (err) {
                         echo "Caught: ${err}"
                         unstable 'Error during build phase'
                     }
-                }
             }
         }
         stage ("test-H2") {
@@ -336,12 +188,14 @@ metadata:
     app: \${2}-\${3}
     type: test
 spec:
+  imagePullSecrets:
+    - name: harbor-pull-internal
   volumes:
     - name: mpdata
       \${volDef}
   containers:
     - name: mp
-      image: 'registry-\${3}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
+      image: '${templateReg}/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
       ports:
         - name: gui
           containerPort: 8080
@@ -499,23 +353,23 @@ phase=1
 mkdir logs-\${timestamp}/h2/\${phase}
 
 echo
-createPVC jenkins test-mp-\${timestamp} 1 | tee logs-\${timestamp}/h2/pvc
-createMPPod jenkins test-mp \${timestamp} test-mp-\${timestamp} | tee logs-\${timestamp}/h2/\${phase}/pod
+createPVC jenkins-legacy test-mp-\${timestamp} 1 | tee logs-\${timestamp}/h2/pvc
+createMPPod jenkins-legacy test-mp \${timestamp} test-mp-\${timestamp} | tee logs-\${timestamp}/h2/\${phase}/pod
 pvcname="\$(cat logs-\${timestamp}/h2/pvc)"
 podname="\$(cat logs-\${timestamp}/h2/\${phase}/pod)"
 
-podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
 while [ "\${podIPs:0:1}" == ":" ]
 do
     sleep 5
-    podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
 done
 podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
 hostIP="\$(echo -n \${podIPs} | cut -d : -f 2)"
 
 echo
 
-kubectl get -n jenkins \${podname} -o=jsonpath="{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
+kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
 
 echo -e  "\\nPod IP: \${podIP}\\nHost IP: \${hostIP}\\n"
 
@@ -524,7 +378,7 @@ if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkApp jenkins \${podname} logs-\${timestamp}/h2/\${phase}
+    checkApp jenkins-legacy \${podname} logs-\${timestamp}/h2/\${phase}
     error=\$?
 fi
 
@@ -567,27 +421,27 @@ then
 else
 
     echo
-    kubectl logs -n jenkins \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
-    kubectl exec -n jenkins \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
-    kubectl delete -n jenkins \${podname}
+    kubectl logs -n jenkins-legacy \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
+    kubectl exec -n jenkins-legacy \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
+    kubectl delete -n jenkins-legacy \${podname}
 
     phase=\$(( \${phase} + 1 ))
     mkdir logs-\${timestamp}/h2/\${phase}
 
-    createMPPod jenkins test-mp \${timestamp} test-mp-\${timestamp} | tee logs-\${timestamp}/h2/\${phase}/pod
+    createMPPod jenkins-legacy test-mp \${timestamp} test-mp-\${timestamp} | tee logs-\${timestamp}/h2/\${phase}/pod
 
-    podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
     while [ "\${podIPs:0:1}" == ":" ]
     do
         sleep 5
-        podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+        podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
     done
     podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
     hostIP="\$(echo -n \${podIPs} | cut -d : -f 2)"
 
     echo
 
-    kubectl get -n jenkins \${podname} -o=jsonpath="{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
+    kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
 
     echo -e  "\\nPod IP: \${podIP}\\nHost IP: \${hostIP}\\n"
 
@@ -596,11 +450,11 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkApp jenkins \${podname} logs-\${timestamp}/h2/\${phase}
+        checkApp jenkins-legacy \${podname} logs-\${timestamp}/h2/\${phase}
         error=\$?
     fi
 
-    kubectl exec -n jenkins \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
+    kubectl exec -n jenkins-legacy \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
 
     echo -e "\\nHealth Check Test..."
     if [ \${error} -ne 0 ]
@@ -634,8 +488,8 @@ fi
 
 echo \${error} > logs-\${timestamp}/test-result-h2
 
-kubectl logs -n jenkins \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
-kubectl delete -n jenkins \${podname} \${pvcname}
+kubectl logs -n jenkins-legacy \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
+kubectl delete -n jenkins-legacy \${podname} \${pvcname}
 
 grep -B 8 -A 4 "^  Version" logs-\${timestamp}/h2/\${phase}/pod-full.log
 
@@ -755,12 +609,14 @@ metadata:
     app: \${2}-\${3}
     type: test
 spec:
+  imagePullSecrets:
+    - name: harbor-pull-internal
   volumes:
     - name: mpdata
       \${volDef}
   initContainers:
     - name: mp-config-init
-      image: 'registry-\${3}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
+      image: '${templateReg}/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
       command: [ "/bin/bash", "-c" ]
       args:
         - cd /opt/midpoint ;
@@ -794,7 +650,7 @@ spec:
       imagePullPolicy: IfNotPresent
   containers:
     - name: mp
-      image: 'registry-\${3}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
+      image: '${templateReg}/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${3}'
       ports:
         - name: gui
           containerPort: 8080
@@ -995,23 +851,23 @@ function checkUserExists {
 }
 
 echo
-createPVC jenkins test-db-\${timestamp} 5 | tee logs-\${timestamp}/native/dbpvc
-createDBPod jenkins test-db \${timestamp} test-db-\${timestamp} 13 | tee logs-\${timestamp}/native/\${phase}/dbpod
+createPVC jenkins-legacy test-db-\${timestamp} 5 | tee logs-\${timestamp}/native/dbpvc
+createDBPod jenkins-legacy test-db \${timestamp} test-db-\${timestamp} 13 | tee logs-\${timestamp}/native/\${phase}/dbpod
 pvcdbname="\$(cat logs-\${timestamp}/native/dbpvc)"
 poddbname="\$(cat logs-\${timestamp}/native/\${phase}/dbpod)"
 
-podIPs="\$(kubectl get -n jenkins \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+podIPs="\$(kubectl get -n jenkins-legacy \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
 while [ "\${podIPs:0:1}" == ":" ]
 do
     sleep 5
-    podIPs="\$(kubectl get -n jenkins \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    podIPs="\$(kubectl get -n jenkins-legacy \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
 done
 poddbIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
 hostdbIP="\$(echo -n \${podIPs} | cut -d : -f 2)"
 
 echo
 
-kubectl get -n jenkins \${poddbname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
+kubectl get -n jenkins-legacy \${poddbname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
 
 echo -e  "\\nPod IP: \${poddbIP}\\nHost IP: \${hostdbIP}\\n"
 
@@ -1020,27 +876,27 @@ if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkDB jenkins \${poddbname} logs-\${timestamp}/native/\${phase} 1
+    checkDB jenkins-legacy \${poddbname} logs-\${timestamp}/native/\${phase} 1
     error=\$?
 fi
 
-createPVC jenkins test-mp-\${timestamp} 1 | tee logs-\${timestamp}/native/pvc
-createMPPod jenkins test-mp \${timestamp} \${poddbIP} test-mp-\${timestamp} | tee logs-\${timestamp}/native/\${phase}/pod
+createPVC jenkins-legacy test-mp-\${timestamp} 1 | tee logs-\${timestamp}/native/pvc
+createMPPod jenkins-legacy test-mp \${timestamp} \${poddbIP} test-mp-\${timestamp} | tee logs-\${timestamp}/native/\${phase}/pod
 pvcname="\$(cat logs-\${timestamp}/native/pvc)"
 podname="\$(cat logs-\${timestamp}/native/\${phase}/pod)"
 
-podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
 while [ "\${podIPs:0:1}" == ":" ]
 do
     sleep 5
-    podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
 done
 podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
 hostIP="\$(echo -n \${podIPs} | cut -d : -f 2)"
 
 echo
 
-kubectl get -n jenkins \${podname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
+kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
 
 echo -e  "\\nPod IP: \${podIP}\\nHost IP: \${hostIP}\\n"
 
@@ -1049,7 +905,7 @@ if [ \${error} -ne 0 ]
 then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
-    checkApp jenkins \${podname} logs-\${timestamp}/native/\${phase}
+    checkApp jenkins-legacy \${podname} logs-\${timestamp}/native/\${phase}
     error=\$?
 fi
 
@@ -1091,30 +947,30 @@ then
     echo -e "\\tSkipped due to the previous error in the tests..."
 else
     echo
-    kubectl logs -n jenkins \${podname} -c mp-config-init > logs-\${timestamp}/native/\${phase}/pod-mp-init-full.log
-    kubectl logs -n jenkins \${podname} -c mp > logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
-    kubectl delete -n jenkins \${podname}
-    kubectl logs -n jenkins \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
-    kubectl delete -n jenkins \${poddbname}
+    kubectl logs -n jenkins-legacy \${podname} -c mp-config-init > logs-\${timestamp}/native/\${phase}/pod-mp-init-full.log
+    kubectl logs -n jenkins-legacy \${podname} -c mp > logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
+    kubectl delete -n jenkins-legacy \${podname}
+    kubectl logs -n jenkins-legacy \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
+    kubectl delete -n jenkins-legacy \${poddbname}
 
     phase=\$(( \${phase} + 1 ))
     mkdir logs-\${timestamp}/native/\${phase}
 
-    createDBPod jenkins test-db \${timestamp} test-db-\${timestamp} 13 | tee logs-\${timestamp}/native/\${phase}/dbpod
+    createDBPod jenkins-legacy test-db \${timestamp} test-db-\${timestamp} 13 | tee logs-\${timestamp}/native/\${phase}/dbpod
     poddbname="\$(cat logs-\${timestamp}/native/\${phase}/dbpod)"
 
-    podIPs="\$(kubectl get -n jenkins \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    podIPs="\$(kubectl get -n jenkins-legacy \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
     while [ "\${podIPs:0:1}" == ":" ]
     do
         sleep 5
-        podIPs="\$(kubectl get -n jenkins \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+        podIPs="\$(kubectl get -n jenkins-legacy \${poddbname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
     done
     poddbIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
     hostdbIP="\$(echo -n \${podIPs} | cut -d : -f 2)"
 
     echo
 
-    kubectl get -n jenkins \${poddbname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
+    kubectl get -n jenkins-legacy \${poddbname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
 
     echo -e  "\\nPod IP: \${poddbIP}\\nHost IP: \${hostdbIP}\\n"
 
@@ -1123,25 +979,25 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkDB jenkins \${poddbname} logs-\${timestamp}/native/\${phase} 0
+        checkDB jenkins-legacy \${poddbname} logs-\${timestamp}/native/\${phase} 0
         error=\$?
     fi
 
-    createMPPod jenkins test-mp \${timestamp} \${poddbIP} test-mp-\${timestamp} | tee logs-\${timestamp}/native/\${phase}/pod
+    createMPPod jenkins-legacy test-mp \${timestamp} \${poddbIP} test-mp-\${timestamp} | tee logs-\${timestamp}/native/\${phase}/pod
     podname="\$(cat logs-\${timestamp}/native/\${phase}/pod)"
 
-    podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+    podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
     while [ "\${podIPs:0:1}" == ":" ]
     do
         sleep 5
-        podIPs="\$(kubectl get -n jenkins \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
+        podIPs="\$(kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{.status.podIP}{':'}{.status.hostIP}")"
     done
     podIP="\$(echo -n \${podIPs} | cut -d : -f 1)"
     hostIP="\$(echo -n \${podIPs} | cut -d : -f 2)"
 
     echo
 
-    kubectl get -n jenkins \${podname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
+    kubectl get -n jenkins-legacy \${podname} -o=jsonpath="{'initContainer exitCode: '}{.status.initContainerStatuses[0].state.terminated.exitCode}{'\\n\\n'}{range .status.conditions[*]}{.type}{': '}{.status}{'\\n'}{end}"
 
     echo -e  "\\nPod IP: \${podIP}\\nHost IP: \${hostIP}\\n"
 
@@ -1150,7 +1006,7 @@ else
     then
         echo -e "\\tSkipped due to the previous error in the tests..."
     else
-        checkApp jenkins \${podname} logs-\${timestamp}/native/\${phase}
+        checkApp jenkins-legacy \${podname} logs-\${timestamp}/native/\${phase}
         error=\$?
     fi
 
@@ -1186,14 +1042,14 @@ fi
 
 echo "\${error}" > logs-\${timestamp}/test-result-native
 
-kubectl logs -n jenkins \${podname} -c mp-config-init > logs-\${timestamp}/native/\${phase}/pod-mp-init-full.log
-kubectl logs -n jenkins \${podname} -c mp > logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
+kubectl logs -n jenkins-legacy \${podname} -c mp-config-init > logs-\${timestamp}/native/\${phase}/pod-mp-init-full.log
+kubectl logs -n jenkins-legacy \${podname} -c mp > logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
 
-kubectl delete -n jenkins \${podname} \${pvcname}
+kubectl delete -n jenkins-legacy \${podname} \${pvcname}
 
-kubectl logs -n jenkins \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
+kubectl logs -n jenkins-legacy \${poddbname} -c postgresql > logs-\${timestamp}/native/\${phase}/pod-db-postgresql-full.log
 
-kubectl delete -n jenkins \${poddbname} \${pvcdbname}
+kubectl delete -n jenkins-legacy \${poddbname} \${pvcdbname}
 
 grep -B 8 -A 4 "^  Version" logs-\${timestamp}/native/\${phase}/pod-mp-mp-full.log
 
@@ -1216,11 +1072,9 @@ timestamp="\$(cat timestamp)"
 #In each cycle there is sleep time set to 5 seconds
 waitCycle=120
 
-curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/_catalog | tee reg_catalog
-if [ \$(grep -c "${repoName}" reg_catalog) -eq 0 ] ; then exit 1 ; fi
-
-curl -s https://registry-\${timestamp}.lab.evolveum.com/v2/${repoName}/tags/list | tee reg_list
-if [ \$(grep -c "build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}" reg_list ) -eq 0 ] ; then exit 1 ; fi
+crane auth login registry.evolveum.com -u "\$(kubectl get secret harbor-robot-internal-jenkins -n jenkins-legacy -o jsonpath='{.data.username}' | base64 -d)" -p "\$(kubectl get secret harbor-robot-internal-jenkins -n jenkins-legacy -o jsonpath='{.data.password}' | base64 -d)"
+crane ls ${templateReg}/${repoName} | tee reg_list
+if [ \$(grep -c "build-${DOCKERTAG}-${IMAGEOS}-\${timestamp}" reg_list ) -eq 0 ] ; then echo "Build image not found in Harbor" ; exit 1 ; fi
 
 echo
 error=0
@@ -1232,7 +1086,7 @@ done < <(cat logs-\${timestamp}/test-result*)
 echo \${error} > logs-\${timestamp}/test-result
 echo "Overall error status is : \${error}"
 
-if [ "${ALTDOCTAG}" == "NO_PUSH" ]
+if [ "\${ALTDOCTAG}" == "NO_PUSH" ]
 then
 	echo "There is request to skip the Image PUSH. Skipping..."
 	exit 0
@@ -1246,7 +1100,7 @@ else
     osSuffix="-\$(echo "${IMAGEOS}" | cut -d "-" -f 1)"
     finalTags=""
     echo " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    for pushTag in ${ALTDOCTAG}
+    for pushTag in \${ALTDOCTAG}
     do
         [ "\${pushTag}" == "" ] && continue
         if [ "\${pushTag}" == "-" ]
@@ -1255,7 +1109,7 @@ else
         	then
 	            finalTags="\${finalTags} ${finalReg}/${repoName}:${DOCKERTAG}\${osSuffix}"
 	        else
-	            finalTags="${finalReg}/${repoName}:${DOCKERTAG}\${osSuffix}\"
+	            finalTags="${finalReg}/${repoName}:${DOCKERTAG}\${osSuffix}"
 	        fi
             [ "\${osSuffix}" == "-ubuntu" ] && finalTags="\${finalTags} ${finalReg}/${repoName}:${DOCKERTAG}"
             [ "${DOCKERTAG}\${osSuffix}" == "4.0-support-alpine" ] && finalTags="\${finalTags} ${finalReg}/${repoName}:4.0support-alpine"
@@ -1285,50 +1139,58 @@ else
 	echo "No tag for push is available..."
 	exit 1
     fi
-    echo "{\\\"auths\\\": { \\\"https://index.docker.io/v1/\\\": { \\\"auth\\\": \\\"\$(echo -n '${dockerUser}:${dockerPw}' | base64)\\\" } } }" > config.json
-    kubectl create -n jenkins secret generic docker-push-\${timestamp} --from-file=config.json
-
     cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Pod
 metadata:
   name: docker-image-push-\${timestamp}
-  namespace: jenkins
+  namespace: jenkins-legacy
 spec:
-  volumes:
-    - name: secret-docker
-      secret:
-        secretName: docker-push-\${timestamp}
+  imagePullSecrets:
+    - name: harbor-pull-internal
   containers:
     - name: docker-image-push
       image: ${templateReg}/${repoName}:build-alpine
       command: [ "/bin/bash", "-c" ]
+      env:
+        - name: HARBOR_USER
+          valueFrom:
+            secretKeyRef:
+              name: harbor-robot-internal-jenkins
+              key: username
+        - name: HARBOR_PASS
+          valueFrom:
+            secretKeyRef:
+              name: harbor-robot-internal-jenkins
+              key: password
+        - name: DOCKER_USER
+          value: "${dockerUser}"
+        - name: DOCKER_PASS
+          value: "${dockerPw}"
       args:
-        - echo \"Processing ... \${finalTags}\" ;
+        - crane auth login registry.evolveum.com -u "\\\${HARBOR_USER}" -p "\\\${HARBOR_PASS}" ;
+          crane auth login index.docker.io -u "\\\${DOCKER_USER}" -p "\\\${DOCKER_PASS}" ;
+          echo \"Processing ... \${finalTags}\" ;
           echo ;
           for s in \${finalTags};
-          do 
-          /usr/local/bin/crane copy registry-\${timestamp}.lab.evolveum.com/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} \\\${s};
+          do
+          /usr/local/bin/crane copy ${templateReg}/${repoName}:build-${DOCKERTAG}-${IMAGEOS}-\${timestamp} \\\${s};
           echo "." ;
           done
-      volumeMounts:
-        - name: secret-docker
-          readOnly: true
-          mountPath: "/root/.docker"
-      imagePullPolicy: Always 
+      imagePullPolicy: Always
   restartPolicy: Never
 EOF
     
-    status=\$(kubectl get -n jenkins pod/docker-image-push-\${timestamp} -o=jsonpath="{.status.phase}")
+    status=\$(kubectl get -n jenkins-legacy pod/docker-image-push-\${timestamp} -o=jsonpath="{.status.phase}")
     while [ "\${status}" == "Pending" -o "\${status}" == "Running" ]
     do
         sleep 15
-        status=\$(kubectl get -n jenkins pod/docker-image-push-\${timestamp} -o=jsonpath="{.status.phase}")
+        status=\$(kubectl get -n jenkins-legacy pod/docker-image-push-\${timestamp} -o=jsonpath="{.status.phase}")
     done
     echo "Downloading the log..."
-    kubectl logs -n jenkins docker-image-push-\${timestamp} -c docker-image-push > logs-\${timestamp}/docker-image-push.log
+    kubectl logs -n jenkins-legacy docker-image-push-\${timestamp} -c docker-image-push > logs-\${timestamp}/docker-image-push.log
     cat logs-\${timestamp}/docker-image-push.log
-    kubectl delete -n jenkins pod/docker-image-push-\${timestamp} secret/docker-push-\${timestamp}
+    kubectl delete -n jenkins-legacy pod/docker-image-push-\${timestamp}
 fi
 
 [ \${error} -ne 0 ] && exit 1
@@ -1343,33 +1205,34 @@ exit 0
         }
          stage ("cleanup environment") {
             container ("kubectl") {
-                withKubeConfig([credentialsId: '6a647093-716e-4e8f-90bd-a8007be37f0e',
-                        serverUrl: 'https://10.100.1.42:6443',
-                        contextName: 'jenkins',
-                        clusterName: 'kubernetes',
-                        namespace: 'jenkins'
-                        ]) {
                     try {
                         sh """#!/bin/bash
 timestamp="\$(cat timestamp)"
 
-kubectl delete -n jenkins \\
-    ingress.networking.k8s.io/docker-registry-\${timestamp} \\
-    service/docker-reg-\${timestamp} \\
-    pod/docker-reg-\${timestamp} \\
-    configmap/docker-reg-\${timestamp}-config \\
-    secret/docker-reg-\${timestamp}-secret
-    
+harborUser="\$(kubectl get secret harbor-robot-internal-jenkins -n jenkins-legacy -o jsonpath='{.data.username}' | base64 -d)"
+harborPass="\$(kubectl get secret harbor-robot-internal-jenkins -n jenkins-legacy -o jsonpath='{.data.password}' | base64 -d)"
+
+crane auth login registry.evolveum.com -u "\${harborUser}" -p "\${harborPass}"
+
+echo "Cleaning up build artifacts from Harbor..."
+for tag in \$(crane ls ${templateReg}/${repoName} | grep "\${timestamp}")
+do
+    digest=\$(crane digest ${templateReg}/${repoName}:\${tag} 2>/dev/null || true)
+    if [ -n "\${digest}" ]
+    then
+        echo "Deleting artifact \${tag} (\${digest})..."
+        curl -s -u "\${harborUser}:\${harborPass}" -X DELETE "https://registry.evolveum.com/api/v2.0/projects/internal/repositories/${repoName}/artifacts/\${digest}" || true
+    fi
+done
+
 echo "Preparing the archive with the logs..."
 tar -cvzf logs.tgz logs-\${timestamp}
                     """
                     } catch (err) {
                         echo "Caught: ${err}"
                     }
-                }
                 archiveArtifacts allowEmptyArchive: true, artifacts: 'logs.tgz', followSymlinks: false                
             }
         }
     }
 }
-
