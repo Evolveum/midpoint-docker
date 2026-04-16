@@ -423,7 +423,11 @@ else
     echo
     kubectl logs -n jenkins-legacy \${podname} > logs-\${timestamp}/h2/\${phase}/pod-full.log
     kubectl exec -n jenkins-legacy \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db
-    kubectl delete -n jenkins-legacy \${podname}
+    echo "Graceful shutdown of midPoint to flush H2 MVStore..."
+    kubectl exec -n jenkins-legacy \${podname} -- /opt/midpoint/bin/midpoint.sh stop || true
+    sleep 10
+    kubectl exec -n jenkins-legacy \${podname} -- ls -lah /opt/midpoint/var/midpoint.mv.db || true
+    kubectl delete -n jenkins-legacy \${podname} --grace-period=60 --wait=true
 
     phase=\$(( \${phase} + 1 ))
     mkdir logs-\${timestamp}/h2/\${phase}
