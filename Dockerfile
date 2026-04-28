@@ -22,19 +22,25 @@ ARG base_image=alpine
 ARG base_image_tag=latest
 #####################################
 
+ARG base_os_family=
+
 FROM ${base_image}:${base_image_tag}
 
 ARG base_image
+ARG base_os_family
 ARG MP_VERSION
 ARG MP_DIR
 ARG MP_DIST_FILE
 ARG SKIP_DOWNLOAD
 
-RUN if [ "${base_image}" = "ubuntu" ]; \
-  then apt-get update -y && apt-get install -y curl libxml2-utils ; \
-  else if [ "${base_image}" = "alpine" ]; \
-  then apk --update add --no-cache libxml2-utils curl bash ; \
-  fi ; fi
+RUN set -eu ; \
+  family="${base_os_family:-${base_image}}" ; \
+  case "${family}" in \
+    ubuntu)     apt-get update -y && apt-get install -y curl libxml2-utils ;; \
+    rockylinux) : ;; \
+    alpine)     apk --update add --no-cache libxml2-utils curl bash ;; \
+    *) echo "Unsupported base_os_family: '${family}' (set --build-arg base_os_family=ubuntu|rockylinux|alpine)" >&2 ; exit 1 ;; \
+  esac
 
 COPY download-midpoint map_midpoint-docker.csv common.bash ${MP_DIST_FILE}* ${MP_DIR}/
 
@@ -78,6 +84,7 @@ ARG MP_VERSION
 ARG MP_DIST_INFO
 ARG base_image
 ARG base_image_tag
+ARG base_os_family
 ARG maintainer
 ARG imagename
 ARG JAVA_VERSION
@@ -102,21 +109,29 @@ ENV MP_SET_file_encoding=UTF8 \
 
 COPY container_files/usr-local-bin/* /usr/local/bin/
 
-RUN if [ "${base_image}" = "ubuntu" ]; \
-  then sed 's/main$/main universe/' -i /etc/apt/sources.list && \
-       apt-get update -y && \
-       apt-get install -y openjdk-${JAVA_VERSION}-jre-headless tzdata curl language-pack-en && \
-       apt-get clean && \
-       rm -rf /var/lib/apt/lists/*/tmp/* /var/tmp/* ; \
-  else if [ "${base_image}" = "rockylinux" ]; \
-  then dnf update -y && dnf install -y java-${JAVA_VERSION}-openjdk-headless tzdata bash which glibc-langpack-en && dnf clean all -y ; \
-  else apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu musl musl-utils musl-locales ; \
-  fi ; fi ; \
-  mkdir -p "${MP_DIR}/bin/" ; \
-  if [ ! -e "${MP_DIR}/bin/setenv.sh" ] ; then echo "#!/usr/bin/env bash" > "${MP_DIR}/bin/setenv.sh" ; fi ; \
-  echo -n "export JAVA_HOME=" >> "${MP_DIR}/bin/setenv.sh" ; \
-  find /usr/lib/jvm -maxdepth 1 -name "*openjdk*" -name "*${JAVA_VERSION}*" -type d | head -1 >> ${MP_DIR}/bin/setenv.sh ; \
-  echo "[ \$(echo \${PATH} | grep -c openjdk) -eq 0 ] && PATH=\${PATH}:\${JAVA_HOME}/bin" >>${MP_DIR}/bin/setenv.sh
+RUN set -eu ; \
+  family="${base_os_family:-${base_image}}" ; \
+  case "${family}" in \
+    ubuntu) \
+      sed 's/main$/main universe/' -i /etc/apt/sources.list && \
+      apt-get update -y && \
+      apt-get install -y openjdk-${JAVA_VERSION}-jre-headless tzdata curl language-pack-en && \
+      apt-get clean && \
+      rm -rf /var/lib/apt/lists/*/tmp/* /var/tmp/* ;; \
+    rockylinux) \
+      dnf update -y && \
+      dnf install -y java-${JAVA_VERSION}-openjdk-headless tzdata bash which glibc-langpack-en && \
+      dnf clean all -y ;; \
+    alpine) \
+      apk --update add --no-cache openjdk${JAVA_VERSION}-jre-headless curl libxml2-utils tzdata bash fontconfig ttf-dejavu musl musl-utils musl-locales ;; \
+    *) echo "Unsupported base_os_family: '${family}' (set --build-arg base_os_family=ubuntu|rockylinux|alpine)" >&2 ; exit 1 ;; \
+  esac && \
+  mkdir -p "${MP_DIR}/bin/" && \
+  java_home="$(find /usr/lib/jvm -maxdepth 1 -name '*openjdk*' -name "*${JAVA_VERSION}*" -type d | head -1)" && \
+  if [ -z "${java_home}" ]; then \
+    echo "JDK not found under /usr/lib/jvm for family=${family}, JAVA_VERSION=${JAVA_VERSION}" >&2 ; exit 1 ; \
+  fi && \
+  printf '#!/usr/bin/env bash\nexport JAVA_HOME=%s\n[ $(echo ${PATH} | grep -c openjdk) -eq 0 ] && PATH=${PATH}:${JAVA_HOME}/bin\n' "${java_home}" > "${MP_DIR}/bin/setenv.sh"
 
 VOLUME ${MP_DIR}/var
 
