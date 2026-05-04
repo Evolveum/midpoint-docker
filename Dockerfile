@@ -59,7 +59,7 @@ RUN if [ "${SKIP_DOWNLOAD}" = "0" ]; \
 RUN if [ -e ${MP_DIR}/lib/midpoint.jar ]; \
   then ln -sf midpoint.jar ${MP_DIR}/lib/midpoint.war ; fi
 
-FROM ${base_image}:${base_image_tag} as java-17
+FROM ${base_image}:${base_image_tag} AS java-17
 
 ENV MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/midpoint \
@@ -68,7 +68,7 @@ ENV MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_missingSchemaAction=create \
  MP_SET_midpoint_repository_upgradeableSchemaAction=stop
 
-FROM ${base_image}:${base_image_tag} as java-21
+FROM ${base_image}:${base_image_tag} AS java-21
 
 ENV MP_SET_midpoint_repository_database=h2 \
  MP_SET_midpoint_repository_jdbcUrl=jdbc:h2:tcp://localhost:5437/./midpoint;DB_CLOSE_ON_EXIT=FALSE;LOCK_MODE=1;LOCK_TIMEOUT=100;MAX_LENGTH_INPLACE_LOB=10240;NON_KEYWORDS=VALUE \
