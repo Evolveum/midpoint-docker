@@ -1,143 +1,106 @@
-= MidPoint
+= midPoint Docker
 
-MidPoint is the leading open source identity governance and administration platform (IGA).
-It is a comprehensive feature-rich system that has been continuously developed and maintained by a full-time team of professionals.
-MidPoint is available under the terms of Apache License and European Union Public License.
-Its regular annual releases ensure midPoint is continuously moving forward while having stability and security as two of its highest priorities.
+midPoint is the leading open source identity governance and administration platform (IGA).
+It is a comprehensive feature-rich system that has been continuously developed and maintained by a
+full-time team of professionals. midPoint is available under the terms of Apache License and European
+Union Public License.
 
-MidPoint is known for its excellent integration capabilities and data centralization, which enables organizations to be in control of identity and accesses it has.
+This repository holds the Dockerfiles and helper scripts for building and running midPoint container
+images.
 
-== Docker Images
+== Just run midPoint
 
-All midPoint docker images are published at link:https://hub.docker.com/r/evolveum/midpoint[Docker Hub].
+All midPoint images are published at link:https://hub.docker.com/r/evolveum/midpoint[Docker Hub], so
+you do not need to build anything to run midPoint.
 
-== Download image:
+Pull the image:
 
-.download image without building
 [source,bash]
 ----
 docker pull evolveum/midpoint
 ----
 
-== Build from git repository
+For a running instance with a database in one command, use the interactive helper (it starts the
+*published* image with PostgreSQL via docker compose, and can manage named instances, logs, etc.):
 
-.clone git repository
 [source,bash]
 ----
-git clone https://github.com/Evolveum/midpoint-docker.git
-cd midpoint-docker
+./midpoint-quickstart.sh
 ----
 
-.build
+Or bring up the stack directly with the provided compose file:
+
 [source,bash]
 ----
-docker build -t evolveum/midpoint .
+docker compose up
 ----
 
-[NOTE]
-====
-The result will be Ubuntu based (default) image with the development midPoint build with the tag latest.
+== Build your own image
 
-*evolveum/midpoint:latest*
-====
+Use `build.sh` to build a current midPoint image from the Dockerfiles in `dockerfiles/`. The image is
+assembled in three stages, all built locally by the script:
 
-=== Build option
+. *base* - OS + JDK (`dockerfiles/Dockerfile-base`)
+. *dist* - the midPoint payload from the public Nexus (`dockerfiles/Dockerfile-dist`)
+. *final* - the runnable image (`dockerfiles/Dockerfile`)
 
-The Dockerfile definition using the build arguments to offer the easy way to customize what to build.
+The distribution tarball is fetched from the public Nexus by `./download-midpoint`; no credentials are
+needed.
+
+[source,bash]
+----
+# latest release, alpine, non-root (midPoint 4.11+ default)
+./build.sh
+
+# a specific release on ubuntu
+./build.sh --os ubuntu 4.9.1
+
+# newest development snapshot
+./build.sh devel
+----
+
+Common options (see `./build.sh --help` for all):
 
 [%autowidth]
-.Available build arguments for build customization
 |===
-| Argument | Meaning | default | possible values
+| Option | Meaning | Default
 
-| MP_VERSION
-| Version of the midpoint to download.
-| latest
-| any released version available on nexus to download +
-e.g. 4.8, latest
-
-| SKIP_DOWNLOAD
-| The flag to set if to download the distribution file or use local one.
-In case of local one the *MP_DIST_FILE* has to be set correctly.
-| 0
-| 0, 1
-
-| MP_DIST_FILE
-| The name of distribution file to use instead of the downloading it from nexus.
-This option require also to set *SKIP_DOWNLOAD* to 1
-| midpoint-dist.tar.gz
-| 
-
-| JAVA_VERSION
-| Java version to install into the builded image.
-| 17
-|
-
-| base_image
-| The base OS image
-| ubuntu
-| We are supporting: +
-- ubuntu +
-- alpine +
-- rockylinux
-
-| base_image_tag
-| The tag of base OS image to use.
-| 22.04
-| e.g. +
-- 22.04 (Ubuntu) +
-- latest (Alpine) +
-- 9.3 (Rocky Linux) + 
-
+| `MP_VERSION` (positional) | Release (e.g. `4.9.1`), `latest`, `devel`, or `X.Y-support` | `latest`
+| `--os` | Base OS family: `alpine` \| `ubuntu` \| `rockylinux` | `alpine`
+| `--os-tag` | Base OS image tag | per family
+| `--java` | JDK version | `21`
+| `--runtime-user` | `root` \| `midpoint` (4.11+ runs as non-root `midpoint`) | `midpoint`
+| `--h2` | Enable the in-memory H2 demo repository | off
+| `--base-image REF` | Reuse a prebuilt base image, skip building the base stage | -
+| `--dist-image REF` | Reuse a prebuilt dist image, skip download + building the dist stage | -
+| `--image` / `--tag` | Final image name / tag | `midpoint` / `<MP_VERSION>-<os>`
 |===
 
-The important *docker build* arguments relevant for our context are listed in following table.
+Reusing a prebuilt stage speeds up repeated builds, e.g. build only the dist + final on top of a
+published base:
 
-.relevant docker build arguments
-|===
-| argument | meaning | sample value
-
-| -t
-| the tag for resulting image
-| -t evolveum/midpoint +
--t evolveum/midpoint:latest +
--t evolveum/midpoint:latest-alpine +
--t evolveum/midpoint:4.8-alpine
-
-| --build-arg
-| argument used during the build process +
-(check the table with available arguments)
-| --build-arg SKIP_DOWNLOAD=1 +
---build-arg MP_DIST_FILE=midpoint-dist-latest.tar.gz +
---build-arg base_image=alpine +
---build-arg base_image_tag=latest +
---build-arg MP_VERSION=4.8
-
-| <context>
-| The directory available during the build as "root" directory.
-| .
-
-|===
-
-Few examples:
-
-.4.8.3 midPoint release based on alpine latest (download during build)
 [source,bash]
-docker build -t evolveum/midpoint:4.8-alpine --build-arg MP_VERSION=4.8 --build-arg base_image=alpine --build-arg base_image_tag=latest .
+----
+./build.sh --base-image registry.evolveum.com/public/midpoint-base:21-alpine devel
+----
 
-.latest midPoint build based on rockylinux 9.3 (download during build)
-[source,bash]
-docker build -t evolveum/midpoint:latest-rockylinux --build-arg base_image=rockylinux --build-arg base_image_tag=9.3 .
+=== Run a locally built image
 
-.custom midPoint build based on ubuntu 22.04 (local dist file midpoint-dist.tar.gz)
+`build.sh` tags the image `midpoint:<MP_VERSION>-<os>` by default. Point the compose file at it via
+`MP_IMAGE`:
+
 [source,bash]
-docker build -t evolveum/midpoint:custom --build-arg SKIP_DOWNLOAD=1 .
- 
-.latest midPoint build based on alpine latest (local dist file midpoint-dist-latest.tar.gz)
-[source,bash]
-docker build -t evolveum/midpoint:custom --build-arg SKIP_DOWNLOAD=1 --build-arg MP_DIST_FILE=midpoint-dist-latest.tar.gz --build-arg base_image=alpine --build-arg base_image_tag=latest .
+----
+MP_IMAGE=midpoint:latest-alpine docker compose up
+----
+
+== Legacy content
+
+The `legacy/` directory holds the previous single-stage `Dockerfile`, the Connector Server
+`Dockerfile-cs`, old templates and container files. It is kept for reference only and is *scheduled
+for removal in 2028*. Do not build on it.
 
 == See also
 
-* link:https://docs.evolveum.com/midpoint/install/containers/[MidPoint In Container] docs page
+* link:https://docs.evolveum.com/midpoint/install/containers/[midPoint In Container] docs page
 * link:https://docs.evolveum.com/midpoint/quickstart/[Quick Start] docs page
