@@ -25,7 +25,8 @@ For a running instance with a database in one command, use the interactive helpe
 
 [source,bash]
 ----
-./midpoint-quickstart.sh
+./midpoint-quickstart.sh          # interactive menu
+./midpoint-quickstart.sh start    # start non-interactively
 ----
 
 Or bring up the stack directly with the provided compose file:
@@ -57,6 +58,9 @@ needed.
 
 # newest development snapshot
 ./build.sh devel
+
+# midPoint 4.10 and older run as root, not the non-root midpoint user
+./build.sh --runtime-user root 4.10.1
 ----
 
 Common options (see `./build.sh --help` for all):
@@ -69,7 +73,7 @@ Common options (see `./build.sh --help` for all):
 | `--os` | Base OS family: `alpine` \| `ubuntu` \| `rockylinux` | `alpine`
 | `--os-tag` | Base OS image tag | per family
 | `--java` | JDK version | `21`
-| `--runtime-user` | `root` \| `midpoint` (4.11+ runs as non-root `midpoint`) | `midpoint`
+| `--runtime-user` | `root` \| `midpoint` (4.11+ run as non-root `midpoint`; use `root` for 4.10 and older) | `midpoint`
 | `--h2` | Enable the in-memory H2 demo repository | off
 | `--base-image REF` | Reuse a prebuilt base image, skip building the base stage | -
 | `--dist-image REF` | Reuse a prebuilt dist image, skip download + building the dist stage | -
