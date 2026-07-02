@@ -1,0 +1,12 @@
+= Legacy content
+
+This directory holds the previous, no longer maintained midPoint-docker content, kept only for
+reference during the transition:
+
+* `Dockerfile` - the old single-stage image build (superseded by `../dockerfiles/` + `../build.sh`).
+* `Dockerfile-cs` - the Connector Server image (no active build; kept as-is for now).
+* `templates/` - old Jenkins job / Dockerfile templates.
+* `container_files/` - files baked into the old single-stage image.
+
+This content is *scheduled for removal in 2028*. Do not build on it. For building a current midPoint
+image see the repository root `README.adoc`.
