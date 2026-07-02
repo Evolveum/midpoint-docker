@@ -1,12 +1,8 @@
 #!/bin/bash
 
 DIR=`dirname "$0"`
-source $DIR/common.bash
-if [[ -n "$1" ]]; then
-  MP_VERSION=$1
-else
-  MP_VERSION=$tag
-fi
+# midPoint version to fetch; defaults to 'latest' (newest release on Nexus) - see resolution below.
+MP_VERSION="${1:-latest}"
 
 fileName=${2:-"midpoint-dist-${MP_VERSION}.tar.gz"}
 dry_run=${3:-0}
