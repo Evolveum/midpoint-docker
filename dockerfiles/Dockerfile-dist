@@ -1,0 +1,25 @@
+ARG MP_DIR=/opt/midpoint
+ARG MP_DIST_FILE=midpoint-dist.tar.gz
+ARG MP_VERSION=devel
+
+# Any image with `tar` is fine for extraction. build.sh sets this to the base image built in the same
+# run, so a standalone build needs no access to any registry.
+ARG extract_image=registry.evolveum.com/public/midpoint-base:21-alpine
+
+FROM ${extract_image} AS extract
+
+ARG MP_DIST_FILE
+
+WORKDIR /srv/midpoint-dist
+
+COPY ${MP_DIST_FILE} ./
+
+RUN tar -xzf ${MP_DIST_FILE} --strip-components=1 && rm -f ${MP_DIST_FILE}
+
+# Pure midPoint dist artifact: scratch + /opt/midpoint files. Not runnable on its own.
+FROM scratch
+ARG MP_DIR
+ARG MP_VERSION
+LABEL Version="${MP_VERSION}"
+LABEL org.opencontainers.image.authors="info@evolveum.com"
+COPY --from=extract /srv/midpoint-dist ${MP_DIR}/

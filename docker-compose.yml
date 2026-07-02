@@ -1,4 +1,9 @@
-version: "3.3"
+# Runs midPoint against a PostgreSQL database.
+#
+# By default it uses the published evolveum/midpoint image. To run an image you built locally with
+# ./build.sh, set MP_IMAGE, e.g.:
+#     MP_IMAGE=midpoint:latest-alpine docker compose up
+# Otherwise pick a published tag via MP_VER (default: latest).
 
 services:
   midpoint_data:
@@ -13,7 +18,7 @@ services:
      - midpoint_data:/var/lib/postgresql/data
 
   data_init:
-    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    image: ${MP_IMAGE:-evolveum/midpoint:${MP_VER:-latest}-alpine}
     command: >
       bash -c "
       cd /opt/midpoint ;
@@ -40,7 +45,7 @@ services:
      - midpoint_home:/opt/midpoint/var
 
   midpoint_server:
-    image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    image: ${MP_IMAGE:-evolveum/midpoint:${MP_VER:-latest}-alpine}
     depends_on:
       data_init:
         condition: service_completed_successfully

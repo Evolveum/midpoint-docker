@@ -1,0 +1,90 @@
+ARG MP_DIR=/opt/midpoint
+ARG JAVA_VERSION=21
+
+ARG base_image=ubuntu
+ARG base_image_tag=24.04
+
+ARG base_os_family=
+
+FROM ${base_image}:${base_image_tag}
+
+ARG MP_DIR
+ARG base_image
+ARG base_image_tag
+ARG base_os_family
+ARG JAVA_VERSION
+
+LABEL org.opencontainers.image.authors="info@evolveum.com"
+
+ENV MP_SET_file_encoding=UTF8 \
+ MP_SET_midpoint_logging_alt_enabled=true \
+ MP_MEM_MAX=2048m \
+ MP_MEM_INIT=1024m \
+ TZ=UTC \
+ LC_ALL=en_US.UTF-8 \
+ LANG=en_US.UTF-8 \
+ LANGUAGE=en_US.UTF-8 \
+ MP_DIR=${MP_DIR}
+
+COPY --chmod=0755 healthcheck.sh /usr/local/bin/healthcheck.sh
+
+ARG PKG_CACHE_BUST=unset
+
+RUN set -eu ; \
+  retry() { n=0 ; until "$@" ; do n=$((n+1)) ; [ $n -ge 5 ] && return 1 ; echo "Retry $n/5 in 10s: $*" >&2 ; sleep 10 ; done ; } ; \
+  family="${base_os_family:-${base_image}}" ; \
+  case "${family}" in \
+    ubuntu) \
+      sed 's/main$/main universe/' -i /etc/apt/sources.list && \
+      retry apt-get update -y && \
+      retry apt-get install -y --no-install-recommends \
+        openjdk-${JAVA_VERSION}-jre-headless \
+        ca-certificates \
+        ca-certificates-java \
+        tzdata \
+        curl \
+        language-pack-en && \
+      apt-get clean && \
+      rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+      ( userdel -r ubuntu 2>/dev/null || true ) && \
+      groupadd -r -g 1000 midpoint && useradd -r -u 1000 -g midpoint -d ${MP_DIR} -s /sbin/nologin midpoint ;; \
+    rockylinux) \
+      retry dnf update -y --nodocs --setopt=install_weak_deps=False && \
+      retry dnf install -y --nodocs --setopt=install_weak_deps=False \
+        java-${JAVA_VERSION}-openjdk-headless \
+        ca-certificates \
+        tzdata \
+        bash \
+        which \
+        glibc-langpack-en && \
+      dnf clean all -y && \
+      groupadd -r -g 1000 midpoint && useradd -r -u 1000 -g midpoint -d ${MP_DIR} -s /sbin/nologin midpoint ;; \
+    alpine) \
+      retry apk --update add --no-cache \
+        openjdk${JAVA_VERSION}-jre-headless \
+        ca-certificates \
+        curl \
+        tzdata \
+        bash \
+        fontconfig \
+        ttf-dejavu \
+        musl-locales && \
+      addgroup -S -g 1000 midpoint && adduser -S -u 1000 -G midpoint -H -h ${MP_DIR} -s /sbin/nologin midpoint ;; \
+    *) echo "Unsupported base_os_family: '${family}' (set --build-arg base_os_family=ubuntu|rockylinux|alpine)" >&2 ; exit 1 ;; \
+  esac && \
+  mkdir -p "${MP_DIR}/bin/" "${MP_DIR}/var" && \
+  java_home="$(find /usr/lib/jvm -maxdepth 1 -name '*openjdk*' -name "*${JAVA_VERSION}*" -type d | head -1)" && \
+  if [ -z "${java_home}" ]; then \
+    echo "JDK not found under /usr/lib/jvm for family=${family}, JAVA_VERSION=${JAVA_VERSION}" >&2 ; exit 1 ; \
+  fi && \
+  printf '#!/usr/bin/env bash\nexport JAVA_HOME=%s\n[ $(echo ${PATH} | grep -c openjdk) -eq 0 ] && PATH=${PATH}:${JAVA_HOME}/bin\n' "${java_home}" > "${MP_DIR}/bin/setenv.sh" && \
+  ( find / -xdev -perm /6000 -type f -exec chmod a-s {} + 2>/dev/null || true ) && \
+  chown -R midpoint:midpoint "${MP_DIR}"
+
+VOLUME ${MP_DIR}/var
+
+HEALTHCHECK --interval=1m --timeout=30s --start-period=2m CMD /usr/local/bin/healthcheck.sh
+
+EXPOSE 8080
+
+CMD [ "/opt/midpoint/bin/midpoint.sh", "container" ]
