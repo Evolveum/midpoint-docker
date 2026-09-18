@@ -3,6 +3,7 @@ version: "3.3"
 services:
   midpoint_data:
     image: postgres:16-alpine
+    restart: always
     environment:
      - POSTGRES_PASSWORD=db.secret.pw.007
      - POSTGRES_USER=midpoint
@@ -41,6 +42,7 @@ services:
 
   midpoint_server:
     image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    restart: always
     depends_on:
       data_init:
         condition: service_completed_successfully
