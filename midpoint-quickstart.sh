@@ -10,6 +10,9 @@ midPoint_home_dir="midpoint-home"
 midPoint_image_name="evolveum/midpoint"
 midPoint_image_ver=latest
 midPoint_image_suffix="-alpine"
+midPoint_database_name="postgres"
+midPoint_database_ver=17
+midPoint_database_suffix="-alpine"
 midPoint_uid=$(id -u)
 midPoint_gid=$(id -g)
 midPoint_init_pwd=""
@@ -228,7 +231,7 @@ get_docker_compose() {
 cat <<EOF
 services:
   midpoint_data:
-    image: postgres:16-alpine
+    image: ${midPoint_database_name}:${midPoint_database_ver}${midPoint_database_suffix}
     environment:
       - POSTGRES_PASSWORD=db.secret.pw.007
       - POSTGRES_USER=midpoint
@@ -536,7 +539,7 @@ delete_midPoint() {
     # handles error messages coming from docker image use overlapping by other midPoint instances without error messages explaining why some images cannot be removed
     local image_errors
     image_errors+=$(docker images "${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" -q | xargs -r docker rmi -f 2>&1)
-    image_errors+=$(docker images "postgres:16-alpine" -q | xargs -r docker rmi -f 2>&1)
+    image_errors+=$(docker images "${midPoint_database_name}:${midPoint_database_ver}${midPoint_database_suffix}" -q | xargs -r docker rmi -f 2>&1)
 
     if [ -d "$midPoint_home_dir" ]; then
         rm -rf "$midPoint_home_dir"
