@@ -8,11 +8,15 @@ midPoint_instance_marker="instance_marker"
 midPoint_port=8080
 midPoint_home_dir="midpoint-home"
 midPoint_image_name="evolveum/midpoint"
-midPoint_image_ver=latest
-midPoint_image_suffix="-alpine"
+midPoint_image_prefix="alpine-"
+midPoint_image_ver="latest"
 midPoint_database_name="postgres"
 midPoint_database_ver=17
 midPoint_database_suffix="-alpine"
+smart_integration_url="https://midpilot-api.evolveum.com/midpilot-smart-integration"
+connector_generation_url="https://midpilot-api.evolveum.com/midpilot-connector-gen/api/v1"
+scim_connector_url="https://nexus.evolveum.com/nexus/repository/snapshots/com/evolveum/polygon/scimrest/connector-scim-generic/0.2.0-SNAPSHOT/connector-scim-generic-0.2.0-20261017.020021-7.jar"
+sql_connector_url="https://nexus.evolveum.com/nexus/repository/snapshots/com/evolveum/polygon/sql/connector-sql-generic/0.2.0-SNAPSHOT/connector-sql-generic-0.2.0-20261017.020022-6.jar"
 midPoint_uid=$(id -u)
 midPoint_gid=$(id -g)
 midPoint_init_pwd=""
@@ -58,7 +62,7 @@ fi
 get_running_port() {
     local port=$(docker ps \
     --filter "name=^${midPoint_instance_name}" \
-    --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
+    --filter "ancestor=${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}" \
     --format "{{.Ports}}" | grep -oE '[0-9]+->8080/tcp' | head -n1 | cut -d'-' -f1)
 
     echo "${port:-}"
@@ -117,7 +121,7 @@ EOF
               midPoint_init_pwd="$pwd_input"
               break
           else
-              echo "Please try again."
+              echo "Try again."
               echo ""
           fi
       done
@@ -242,7 +246,7 @@ services:
       - midpoint_data:/var/lib/postgresql/data
 
   data_init:
-    image: ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
+    image: ${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}
     command: >
       bash -c "
       cd /opt/midpoint ;
@@ -269,7 +273,7 @@ services:
       - ${midPoint_base_dir}/${midPoint_home_dir}:/opt/midpoint/var
 
   midpoint_server:
-    image: ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
+    image: ${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}
     depends_on:
       data_init:
         condition: service_completed_successfully
@@ -365,7 +369,7 @@ EOF
   if [ ! -d "$midPoint_home_dir" ] || [ -z "$midPoint_init_pwd" ]; then
     container_name=$(docker ps \
       --filter "name=^${midPoint_instance_name}" \
-      --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
+      --filter "ancestor=${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}" \
       --format "{{.Names}}" | head -n1)
 
     if [ -z "$container_name" ]; then
@@ -396,7 +400,7 @@ show_info() {
 Dual-licensed under Apache License 2.0 and European Union Public License.
 
 Version:                        ${midPoint_image_ver}
-Image:                          ${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}
+Image:                          ${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}
 EOF
 
 if [[ "$caller" == "cli" ]]; then
@@ -449,7 +453,7 @@ EOF
 show_logs() {
     container_name=$(docker ps \
         --filter "name=^${midPoint_instance_name}" \
-        --filter "ancestor=${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" \
+        --filter "ancestor=${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}" \
         --format "{{.Names}}" | head -n1)
 
     if [ -z "$container_name" ]; then
@@ -493,9 +497,15 @@ Usage: $(basename "$0") [OPTION]
 
 Option:
   start     Start midPoint using Docker Compose; takes 2 optional keyword arguments:
-              --port (-p)       Select port number (up to 65535) on which midPoint will run;
-              --password (-w)   Set initial password for midPoint (works only on initial start, otherwise is ignored)
-              --name (-n)       Set name of the project for docker containers, volumes and network (works only on initial start, otherwise is ignored)
+                --port (-p)       Select port number (up to 65535) on which midPoint will run;
+                --password (-w)   Set initial password for midPoint (works only on initial start, otherwise is ignored)
+                --name (-n)       Set name of the project for docker containers, volumes and network (works only on initial start, otherwise is ignored)
+  midpilot  Configure MidPilot Smart integration in midPoint; takes 2 optional keyword arguments:
+                --password (-w)   Set current midPoint administrator password for authentication (if not provided, will be prompted interactively);
+                                  it must match current midPoint administrator password
+                --api_key (-k)    Set Smart integration API key (if not provided, will be prompted interactively);
+                                  it must be a valid Smart integration API key for the Smart integration functionality to work correctly;
+                                  it can be obtained from https://integrations.evolveum.com/settings after logging in            
   info      Show version, image, and environment details
   yaml      Print the Docker Compose YAML used internally by this script; the file is not saved in the environment
   logs      Display logs of the running midPoint container; press 'B' to stop the logs
@@ -538,7 +548,7 @@ delete_midPoint() {
 
     # handles error messages coming from docker image use overlapping by other midPoint instances without error messages explaining why some images cannot be removed
     local image_errors
-    image_errors+=$(docker images "${midPoint_image_name}:${midPoint_image_ver}${midPoint_image_suffix}" -q | xargs -r docker rmi -f 2>&1)
+    image_errors+=$(docker images "${midPoint_image_name}:${midPoint_image_prefix}${midPoint_image_ver}" -q | xargs -r docker rmi -f 2>&1)
     image_errors+=$(docker images "${midPoint_database_name}:${midPoint_database_ver}${midPoint_database_suffix}" -q | xargs -r docker rmi -f 2>&1)
 
     if [ -d "$midPoint_home_dir" ]; then
@@ -597,6 +607,124 @@ EOF
 
     delete_midPoint
 }
+
+xml_escape() {
+    printf '%s' "$1" |
+        sed -e 's/&/\&amp;/g' \
+            -e 's/</\&lt;/g' \
+            -e 's/>/\&gt;/g'
+}
+
+configure_smart_integration() {
+    local port
+    port="$(get_running_port)"
+    if [[ -z "$port" ]]; then
+        echo "No running midPoint container found."
+        echo "Start midPoint first."
+        return 1
+    fi
+
+    local password=""
+    local api_key=""
+
+    for arg in "$@"; do
+        case "$arg" in
+            password=*) password="${arg#*=}" ;;
+            api_key=*)  api_key="${arg#*=}" ;;
+            *) echo "Unknown option $arg"; return 1 ;;
+        esac
+    done
+
+    if [[ -z "$password" ]]; then
+        read -rsp "Enter your current midPoint administrator password: " password
+        echo
+        if [[ -z "$password" ]]; then
+            echo "No password provided. Smart integration configuration canceled."
+            return 1
+        fi
+    fi
+
+    if [[ -z "$api_key" ]]; then
+        read -rsp "Enter your Smart integration API key (if you don't have one yet, you can get it from https://integrations.evolveum.com/settings after logging in): " api_key
+        echo
+        if [[ -z "$api_key" ]]; then
+            echo "No API key provided. Smart integration configuration canceled."
+            return 1
+        fi
+    fi
+
+    local xml_api_key
+    xml_api_key="$(xml_escape "$api_key")"
+
+    local base_url="http://localhost:${port}"
+    local username="administrator"
+    local smart_integration_config
+    local http_status
+
+    smart_integration_config="$(cat <<XML
+<s:search xmlns:s="http://midpoint.evolveum.com/xml/ns/public/model/scripting-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3">
+    <s:options>
+        <option>
+            <options>
+                <raw>true</raw>
+            </options>
+        </option>
+    </s:options>
+    <s:type>c:SystemConfigurationType</s:type>
+    <s:action>
+        <s:type>modify</s:type>
+        <s:parameter>
+            <s:name>delta</s:name>
+            <c:value>
+                <s:itemDelta>
+                    <t:modificationType>add</t:modificationType>
+                    <t:path>smartIntegration</t:path>
+                    <t:value>
+                        <serviceUrl>${smart_integration_url}</serviceUrl>
+                        <serviceApiKey>
+                            <t:clearValue>${xml_api_key}</t:clearValue>
+                        </serviceApiKey>
+                        <connectorGenerationUrl>${connector_generation_url}</connectorGenerationUrl>
+                        <connectorGeneratorApiKey>
+                            <t:clearValue>${xml_api_key}</t:clearValue>
+                        </connectorGeneratorApiKey>
+                        <connectorFrameworkUrl>${scim_connector_url}</connectorFrameworkUrl>
+                        <connectorSqlFrameworkUrl>${sql_connector_url}</connectorSqlFrameworkUrl>
+                        <statisticsTtl>P1D</statisticsTtl>
+                        <schemaMatchTtl>P1D</schemaMatchTtl>
+                        <mappingSuggestionRetryCount>1</mappingSuggestionRetryCount>
+                    </t:value>
+                </s:itemDelta>
+            </c:value>
+        </s:parameter>
+    </s:action>
+</s:search>
+XML
+)"
+
+    http_status=$(curl -sS -o /dev/null -w "%{http_code}" \
+        --user "${username}:${password}" \
+        -H "Accept: application/xml" \
+        -H "Content-Type: application/xml" \
+        -X POST \
+        -d "${smart_integration_config}" \
+        "${base_url}/midpoint/ws/rest/rpc/executeScript")
+
+    if [[ "$http_status" == "200" ]]; then
+        echo "MidPilot Smart integration was configured with your API key."
+    elif [[ "$http_status" == "401" ]]; then
+        echo "MidPilot Smart integration configuration failed due to authentication error. Check your midPoint administrator password and try again."
+        return 1
+    else
+        echo "MidPilot Smart integration configuration failed. HTTP $http_status. Try again later."
+        echo "If the problem persists, you may still configure MidPilot Smart integration manually in midPoint's System Configuration settings - MidPilot Smart Integration in midPoint GUI."
+        return 1
+    fi
+
+}
+
 #####################
 # interface section #
 #####################
@@ -605,30 +733,32 @@ show_default_menu() {
     echo "${midPoint_logo}"
     while true; do
     cat << EOF
-+------------------------------+
-|        -- MAIN MENU --       |
-|------------------------------|
-| (S)tart midPoint             |
-| (I)nformation                |
-| (L)ogs, then (b)ack          |
-+------------------------------+
-| (RES)et to factory settings  |
-| (DEL)ete midPoint            |
-+------------------------------+
-| (Q)uit and stop midPoint     |
-+------------------------------+
++------------------------------------------+
+|             --  MAIN MENU  --            |
+|------------------------------------------|
+| (S)tart midPoint                         |
+| (C)onfigure MidPilot Smart integration   |
+| (I)nformation                            |
+| (L)ogs, then (b)ack                      |
++------------------------------------------+
+| (RES)et to factory settings              |
+| (DEL)ete midPoint                        |
++------------------------------------------+
+| (Q)uit and stop midPoint                 |
++------------------------------------------+
 EOF
         read -r -p "Select option: " choice
         choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
 
         case $choice in
             s) run_midPoint ;;
+            c) configure_smart_integration ;;
             i) show_info ;;
             l) show_logs ;;
             res) delete_db_after_confirm ;;
             del) delete_midPoint_after_confirm ;;
             q) quit_midPoint ;;
-            *) echo "Unknown choice, please try again." ;;
+            *) echo "Unknown choice, try again." ;;
         esac
     done
 }
@@ -666,7 +796,15 @@ while [ $# -gt 0 ]; do
             requested_instance_name="$2"
             shift 2
             ;;
-        start|info|logs|yaml|reset|delete|stop|help|--help|-h)
+        --api-key|-k)
+            if [ -z "$2" ] || [[ "$2" == -* ]]; then
+                echo "Error: --api-key requires a value, e.g. --api-key your_api_key"
+                exit 1
+            fi
+            user_api_key="$2"
+            shift 2
+            ;;
+        start|midpilot|info|logs|yaml|reset|delete|stop|help|--help|-h)
             cmd="$1"
             shift
             ;;
@@ -681,6 +819,10 @@ done
 case "$cmd" in
     start)
         run_midPoint "port=$requested_port" "password=$requested_pwd" "name=$requested_instance_name"
+        exit 0
+        ;;
+    midpilot)
+        configure_smart_integration "api_key=$user_api_key" "password=$requested_pwd"
         exit 0
         ;;
     info)
