@@ -37,6 +37,7 @@ RUN set -eu ; \
     ubuntu) \
       sed 's/main$/main universe/' -i /etc/apt/sources.list && \
       retry apt-get update -y && \
+      retry apt-get -y --with-new-pkgs upgrade && \
       retry apt-get install -y --no-install-recommends \
         openjdk-${JAVA_VERSION}-jre-headless \
         ca-certificates \
@@ -60,6 +61,7 @@ RUN set -eu ; \
       dnf clean all -y && \
       groupadd -r -g 1000 midpoint && useradd -r -u 1000 -g midpoint -d ${MP_DIR} -s /sbin/nologin midpoint ;; \
     alpine) \
+      retry apk --no-cache upgrade && \
       retry apk --update add --no-cache \
         openjdk${JAVA_VERSION}-jre-headless \
         ca-certificates \

@@ -1,9 +1,10 @@
 #!/bin/sh
 set -e
 
-if [ -e /opt/midpoint/var ] && [ ! -w /opt/midpoint/var ]; then
+probe="/opt/midpoint/var/.write-probe.$$"
+if [ -e /opt/midpoint/var ] && ! ( : > "$probe" ) 2>/dev/null; then
+    echo "ERROR: /opt/midpoint/var is not writable by the current user (UID $(id -u), GID $(id -g))." >&2
     cat >&2 <<'EOF'
-ERROR: /opt/midpoint/var is not writable by the midpoint user (UID 1000).
 
 midPoint 4.11+ runs as the unprivileged `midpoint` user (UID 1000). Two common
 cases lead here:
@@ -20,6 +21,7 @@ cases lead here:
 EOF
     exit 1
 fi
+rm -f "$probe"
 
 if [ "${MP_H2_DEFAULTS:-false}" = "true" ] && [ -z "${MP_SET_midpoint_repository_database:-}" ]; then
     export MP_SET_midpoint_repository_database=h2
