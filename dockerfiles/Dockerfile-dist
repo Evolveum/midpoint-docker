@@ -4,7 +4,7 @@ ARG MP_VERSION=devel
 
 # Any image with `tar` is fine for extraction. build.sh sets this to the base image built in the same
 # run, so a standalone build needs no access to any registry.
-ARG extract_image=registry.evolveum.com/public/midpoint-base:21-alpine
+ARG extract_image=registry.evolveum.com/public/midpoint-base:25-alpine
 
 FROM ${extract_image} AS extract
 

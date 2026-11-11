@@ -36,6 +36,8 @@ Or bring up the stack directly with the provided compose file:
 docker compose up
 ----
 
+The compose file runs PostgreSQL 17. A database volume created by an older version of the file (PostgreSQL 16) cannot be opened by PostgreSQL 17: either migrate it with `pg_dump` / `pg_restore`, or start over with `docker compose down -v`, which deletes the data.
+
 == Build your own image
 
 Use `build.sh` to build a current midPoint image from the Dockerfiles in `dockerfiles/`. The image is
@@ -46,7 +48,7 @@ assembled in three stages, all built locally by the script:
 . *final* - the runnable image (`dockerfiles/Dockerfile`)
 
 The distribution tarball is fetched from the public Nexus by `./download-midpoint`; no credentials are
-needed.
+needed. The Dockerfiles take their versions as build arguments; build them through `build.sh` or a preset rather than with a plain `docker build`.
 
 [source,bash]
 ----

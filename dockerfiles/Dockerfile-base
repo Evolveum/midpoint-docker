@@ -1,8 +1,8 @@
 ARG MP_DIR=/opt/midpoint
-ARG JAVA_VERSION=21
+ARG JAVA_VERSION=25
 
 ARG base_image=ubuntu
-ARG base_image_tag=24.04
+ARG base_image_tag=26.04
 
 ARG base_os_family=
 
