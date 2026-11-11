@@ -15,15 +15,16 @@
 #   ./build.sh [options] [MP_VERSION]
 #
 #   MP_VERSION            midPoint version to build (default: latest). Accepts a release (e.g. 4.9.1),
-#                         'latest' (newest release), 'devel' (newest snapshot), or 'X.Y-support'.
+#                         'latest' (newest release), 'X.Y-latest' (newest X.Y.Z release),
+#                         'devel' (newest snapshot), or 'X.Y-support' (newest X.Y support branch snapshot).
 #
 # Options:
 #   --os FAMILY          Base OS family: alpine | ubuntu | rockylinux   (default: alpine)
 #   --os-tag TAG         Base OS image tag                              (default per family)
-#   --java VERSION       JDK version                                    (default: 21)
-#   --runtime-user USER  root | midpoint   (midPoint 4.11+ runs as the non-root midpoint user; default: midpoint)
-#   --h2                 Enable the in-memory H2 demo repository defaults (default: off)
-#   --base-image REF     Use this prebuilt base image (skip building base), e.g. registry.evolveum.com/public/midpoint-base:21-alpine
+#   --java VERSION       JDK version: 25 for 4.11+, 21 for 4.10 and older (default: 25)
+#   --runtime-user USER  root | midpoint: midpoint for 4.11+, root for 4.10 and older (default: midpoint)
+#   --h2                 Enable the in-memory H2 demo repository defaults, for 4.8 and older (default: off)
+#   --base-image REF     Use this prebuilt base image (skip building base), e.g. registry.evolveum.com/public/midpoint-base:25-alpine
 #   --dist-image REF     Use this prebuilt dist image (skip download + building dist)
 #   --image NAME         Final image name                              (default: midpoint)
 #   --tag TAG            Final image tag                               (default: <MP_VERSION>-<os>)
@@ -31,8 +32,10 @@
 #
 # Examples:
 #   ./build.sh                              # latest release, alpine, non-root
-#   ./build.sh --os ubuntu 4.9.1            # a specific release on ubuntu
-#   ./build.sh --base-image registry.evolveum.com/public/midpoint-base:21-alpine devel
+#   ./build.sh --os ubuntu --java 21 --runtime-user root 4.9.9   # a specific older release on ubuntu
+#   ./build.sh --base-image registry.evolveum.com/public/midpoint-base:25-alpine devel
+#
+# presets/ holds ready-made wrappers with the right parameters per midPoint version.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -42,7 +45,7 @@ CTX="${DIR}/dockerfiles"
 MP_VERSION="latest"
 OS_FAMILY="alpine"
 OS_TAG=""
-JAVA_VERSION="21"
+JAVA_VERSION="25"
 RUNTIME_USER="midpoint"
 H2_DEFAULTS="false"
 BASE_IMAGE=""
@@ -67,20 +70,19 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-# Default base OS tag per family (state-of-the-art rolling defaults).
-if [ -z "${OS_TAG}" ]; then
-    case "${OS_FAMILY}" in
-        alpine)     OS_TAG="3.24" ;;
-        ubuntu)     OS_TAG="24.04" ;;
-        rockylinux) OS_TAG="10" ;;
-        *)          echo "Unsupported --os '${OS_FAMILY}' (alpine|ubuntu|rockylinux)" >&2; exit 1 ;;
-    esac
-fi
+# Upstream OS image and default tag per family (state-of-the-art rolling defaults).
+case "${OS_FAMILY}" in
+    alpine)     OS_IMAGE="alpine";                DEFAULT_OS_TAG="3.24" ;;
+    ubuntu)     OS_IMAGE="ubuntu";                DEFAULT_OS_TAG="26.04" ;;
+    rockylinux) OS_IMAGE="rockylinux/rockylinux"; DEFAULT_OS_TAG="10" ;;
+    *)          echo "Unsupported --os '${OS_FAMILY}' (alpine|ubuntu|rockylinux)" >&2; exit 1 ;;
+esac
+OS_TAG="${OS_TAG:-${DEFAULT_OS_TAG}}"
 
 [ -z "${IMAGE_TAG}" ] && IMAGE_TAG="${MP_VERSION}-${OS_FAMILY}"
 
 # Local stage tags (used when we build a stage ourselves).
-BASE_REF="${BASE_IMAGE:-midpoint-base:local-${OS_FAMILY}}"
+BASE_REF="${BASE_IMAGE:-midpoint-base:local-${JAVA_VERSION}-${OS_FAMILY}-${OS_TAG}}"
 DIST_REF="${DIST_IMAGE:-midpoint-dist:local}"
 FINAL_REF="${IMAGE_NAME}:${IMAGE_TAG}"
 DIST_FILE="midpoint-dist.tar.gz"   # relative to the build context (dockerfiles/)
@@ -95,7 +97,7 @@ echo "    base=${BASE_REF}${BASE_IMAGE:+ (prebuilt)}  dist=${DIST_REF}${DIST_IMA
 if [ -z "${BASE_IMAGE}" ]; then
     echo "==> [1/3] building base image ${BASE_REF}"
     docker build -f "${CTX}/Dockerfile-base" -t "${BASE_REF}" \
-        --build-arg base_image="${OS_FAMILY}" \
+        --build-arg base_image="${OS_IMAGE}" \
         --build-arg base_image_tag="${OS_TAG}" \
         --build-arg base_os_family="${OS_FAMILY}" \
         --build-arg JAVA_VERSION="${JAVA_VERSION}" \
@@ -107,17 +109,21 @@ fi
 # 2. dist (download tarball + build the scratch payload image)
 if [ -z "${DIST_IMAGE}" ]; then
     echo "==> [2/3] downloading dist tarball for ${MP_VERSION}"
+    rm -f "${CTX}/${DIST_FILE}" "${CTX}/${DIST_FILE}.info"
     "${DIR}/download-midpoint" "${MP_VERSION}" "dockerfiles/${DIST_FILE}"
     MP_DIST_INFO="$( [ -f "${CTX}/${DIST_FILE}.info" ] && head -n1 "${CTX}/${DIST_FILE}.info" || echo 'N/A' )"
+    RESOLVED_VERSION="$(printf '%s' "${MP_DIST_INFO}" | sed -n 's/^Nexus: \([^ ]*\) .*/\1/p')"
+    LABEL_VERSION="${RESOLVED_VERSION:-${MP_VERSION}}"
     echo "==> [2/3] building dist image ${DIST_REF}"
     docker build -f "${CTX}/Dockerfile-dist" -t "${DIST_REF}" \
         --build-arg extract_image="${BASE_REF}" \
         --build-arg MP_DIST_FILE="${DIST_FILE}" \
-        --build-arg MP_VERSION="${MP_VERSION}" \
+        --build-arg MP_VERSION="${LABEL_VERSION}" \
         "${CTX}"
 else
     echo "==> [2/3] using prebuilt dist ${DIST_REF}"
     MP_DIST_INFO="N/A"
+    LABEL_VERSION="${MP_VERSION}"
 fi
 
 # 3. final
@@ -127,7 +133,7 @@ docker build -f "${CTX}/Dockerfile" -t "${FINAL_REF}" \
     --build-arg base_image_tag="$(split_tag "${BASE_REF}")" \
     --build-arg dist_image="$(split_name "${DIST_REF}")" \
     --build-arg dist_image_tag="$(split_tag "${DIST_REF}")" \
-    --build-arg MP_VERSION="${MP_VERSION}" \
+    --build-arg MP_VERSION="${LABEL_VERSION}" \
     --build-arg MP_DIST_INFO="${MP_DIST_INFO}" \
     --build-arg RUNTIME_USER="${RUNTIME_USER}" \
     --build-arg H2_DEFAULTS="${H2_DEFAULTS}" \
