@@ -50,18 +50,42 @@ needed.
 
 [source,bash]
 ----
-# latest release, alpine, non-root (midPoint 4.11+ default)
+# latest release, alpine, Java 25, non-root (midPoint 4.11+ defaults)
 ./build.sh
-
-# a specific release on ubuntu
-./build.sh --os ubuntu 4.9.1
 
 # newest development snapshot
 ./build.sh devel
 
-# midPoint 4.10 and older run as root, not the non-root midpoint user
-./build.sh --runtime-user root 4.10.1
+# midPoint 4.10 and older: Java 21 and the root user
+./build.sh --os ubuntu --java 21 --runtime-user root 4.10.5
 ----
+
+=== Presets per midPoint version
+
+The parameters differ per midPoint version. The scripts in `presets/` call `build.sh` with the same parameters the official images are built with, so you only pick the version:
+
+[source,bash]
+----
+./presets/build-nightly.sh          # newest development snapshot (master)
+./presets/build-4.11.sh             # newest 4.11.Z release
+./presets/build-4.11.sh 4.11.0      # a specific 4.11 release
+./presets/build-4.11.sh nightly     # newest 4.11 support branch snapshot
+./presets/build-lts.sh              # newest release of the current LTS line (4.8)
+./presets/build-lts.sh nightly      # newest LTS support branch snapshot
+----
+
+Any further options are passed to `build.sh` and override the preset, e.g. `./presets/build-4.10.sh 4.10.5 --os rockylinux`.
+
+[%autowidth]
+|===
+| Preset | midPoint | Java | OS | Runtime user | H2 demo repository
+
+| `build-nightly.sh` | development snapshot | 25 | alpine | `midpoint` | no
+| `build-4.11.sh` | 4.11 | 25 | alpine | `midpoint` | no
+| `build-4.10.sh` | 4.10 | 21 | ubuntu | `root` | no
+| `build-4.9.sh` | 4.9 | 21 | ubuntu | `root` | no
+| `build-4.8.sh`, `build-lts.sh` | 4.8 (LTS) | 21 | ubuntu | `root` | yes
+|===
 
 Common options (see `./build.sh --help` for all):
 
@@ -69,12 +93,12 @@ Common options (see `./build.sh --help` for all):
 |===
 | Option | Meaning | Default
 
-| `MP_VERSION` (positional) | Release (e.g. `4.9.1`), `latest`, `devel`, or `X.Y-support` | `latest`
+| `MP_VERSION` (positional) | Release (e.g. `4.9.9`), `latest`, `X.Y-latest` (newest `X.Y.Z` release), `devel`, or `X.Y-support` (newest `X.Y` support branch snapshot) | `latest`
 | `--os` | Base OS family: `alpine` \| `ubuntu` \| `rockylinux` | `alpine`
 | `--os-tag` | Base OS image tag | per family
-| `--java` | JDK version | `21`
+| `--java` | JDK version (`25` for 4.11+, `21` for 4.10 and older) | `25`
 | `--runtime-user` | `root` \| `midpoint` (4.11+ run as non-root `midpoint`; use `root` for 4.10 and older) | `midpoint`
-| `--h2` | Enable the in-memory H2 demo repository | off
+| `--h2` | Enable the in-memory H2 demo repository (4.8 and older) | off
 | `--base-image REF` | Reuse a prebuilt base image, skip building the base stage | -
 | `--dist-image REF` | Reuse a prebuilt dist image, skip download + building the dist stage | -
 | `--image` / `--tag` | Final image name / tag | `midpoint` / `<MP_VERSION>-<os>`
@@ -85,7 +109,7 @@ published base:
 
 [source,bash]
 ----
-./build.sh --base-image registry.evolveum.com/public/midpoint-base:21-alpine devel
+./build.sh --base-image registry.evolveum.com/public/midpoint-base:25-alpine devel
 ----
 
 === Run a locally built image
