@@ -39,6 +39,17 @@ else
 		repo="${l_repo}"
 		MP_VER="$( echo "${repoList}" | grep "^[0-9\.]*$" | tail -n 1)"
 		echo "Last stable release has been selected - ${MP_VER} @ ${repo}"
+	elif [ "${MP_VERSION: -7}" == "-latest" ]
+	then
+		temp_version="${MP_VERSION%-latest}"
+		MP_VER="$( echo "${repoList}" | grep "^${temp_version//./\\.}\(\.[0-9]*\)\{0,1\}\$" | tail -n 1)"
+		if [ "${MP_VER}" == "" ]
+		then
+			echo "No release found for ${temp_version}"
+			exit 1
+		fi
+		repo="${l_repo}"
+		echo "Last release of ${temp_version} has been selected - ${MP_VER} @ ${repo}"
 	else
 		if [ $( echo "${repoList}" | grep "^${MP_VERSION}\$" | wc -l ) -eq 1 ]
 		then
